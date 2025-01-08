@@ -60,6 +60,27 @@ function Records() {
         ? data.filter((row, index) => index === 0 || (row[3] === selectedAllotment && row[7] === selectedProgram))
         : data;
 
+    const totals = filteredData.slice(1).reduce((acc, row:any) => {
+        const amount = row[12] ? Number(row[12].replace(/,/g, '').trim()) : 0;
+        const matchingRaods = raod.slice(1).filter(raodRow => 
+            raodRow[0] === row[7] && 
+            raodRow[3] === row[3] && 
+            raodRow[5] === row[11] && 
+            raodRow.length > 11
+        );
+        const totalObligation = matchingRaods.reduce((sum, raodRow:any) => {
+            const value = raodRow[14] ? Number(raodRow[14].replace(/,/g, '').trim()) : 0;
+            return sum + value;
+        }, 0);
+        const unobligated = amount - totalObligation;
+
+        return {
+            amount: acc.amount + amount,
+            obligation: acc.obligation + totalObligation,
+            unobligated: acc.unobligated + unobligated
+        };
+    }, { amount: 0, obligation: 0, unobligated: 0 });
+
     return (
         <div className="h-full w-[100%] mt-[10vh]">
             <div className='w-[100%] flex gap-5'>
@@ -189,28 +210,86 @@ function Records() {
                                                     <table className="min-w-full divide-y divide-gray-200">
                                                         <thead className="bg-gray-100">
                                                             <tr>
+                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Details</th>
                                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">DV Number</th>
                                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payee</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">OBRs No. /Serial Number</th>
-                                                                
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Net Amount</th>
-                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Remarks</th>
+                                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">OBRs No.</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Debit/Amount</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Credit</th>
+                                                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Balance</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {matchingRaods.map((raodRow, index) => (
-                                                                <tr key={index} className="hover:bg-gray-50">
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{raodRow[12]}</td>
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{raodRow[7]}</td>
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{raodRow[1]}</td>
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{`${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`}</td>
-                                                                    
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{raodRow[13]}</td>
-                                                                    <td className="px-4 py-2 text-sm text-gray-500">{raodRow[17]}</td>
-                                                                </tr>
-                                                            ))}
+                                                            {/* Initial Amount Row */}
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td colSpan={4} className="px-4 py-2 text-sm text-gray-500">Initial Amount</td>
+                                                                <td className="px-4 py-2 text-sm text-gray-500 text-right">
+                                                                {row[12]}
+                                                                </td>
+                                                                <td></td>
+                                                                <td className="px-4 py-2 text-sm text-gray-500 text-right">
+                                                                {row[12]}
+                                                                </td>
+                                                            </tr>
+                                                            {/* Credit Entries */}
+                                                            {matchingRaods.map((raodRow, index) => {
+                                                                const initialAmount = Number(row[12].replace(/,/g, ''));
+                                                                const credit = Number(raodRow[14].replace(/,/g, ''));
+                                                                const previousCredits = matchingRaods
+                                                                    .slice(0, index)
+                                                                    .reduce((sum, r) => sum + Number(r[14].replace(/,/g, '')), 0);
+                                                                const balance = initialAmount - previousCredits - credit;
+
+                                                                return (
+                                                                    <tr key={index} className="hover:bg-gray-50">
+                                                                        <td className="px-4 py-2 text-sm text-gray-500">{raodRow[12]}</td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500">{raodRow[7]}</td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500">{raodRow[1]}</td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500">
+                                                                            {`${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`}
+                                                                        </td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500 text-right"></td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+                                                                            {credit.toLocaleString('en-US', {
+                                                                                minimumFractionDigits: 2,
+                                                                                maximumFractionDigits: 2
+                                                                            })}
+                                                                        </td>
+                                                                        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+                                                                            {balance.toLocaleString('en-US', {
+                                                                                minimumFractionDigits: 2,
+                                                                                maximumFractionDigits: 2
+                                                                            })}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
+                                                        <tfoot className="bg-gray-100">
+                                                            <tr>
+                                                                <td colSpan={4} className="px-4 py-2 font-bold">Total</td>
+                                                                <td className="px-4 py-2 text-right font-bold">
+                                                                   
+                                                                </td>
+                                                                <td className="px-4 py-2 text-right font-bold">
+                                                                    {matchingRaods.reduce((sum, raodRow) => 
+                                                                        sum + Number(raodRow[14].replace(/,/g, '')), 0
+                                                                    ).toLocaleString('en-US', {
+                                                                        minimumFractionDigits: 2,
+                                                                        maximumFractionDigits: 2
+                                                                    })}
+                                                                </td>
+                                                                <td className="px-4 py-2 text-right font-bold">
+                                                                    {(Number(row[12].replace(/,/g, '')) - 
+                                                                        matchingRaods.reduce((sum, raodRow) => 
+                                                                            sum + Number(raodRow[14].replace(/,/g, '')), 0
+                                                                        )).toLocaleString('en-US', {
+                                                                        minimumFractionDigits: 2,
+                                                                        maximumFractionDigits: 2
+                                                                    })}
+                                                                </td>
+                                                            </tr>
+                                                        </tfoot>
                                                     </table>
                                                 </div>
                                             </td>
@@ -220,6 +299,30 @@ function Records() {
                             );
                         })}
                     </tbody>
+                    <tfoot className="bg-[#e3ffe5] sticky bottom-0 border border-border">
+                        <tr>
+                            <td colSpan={5} className="px-6 py-3 text-sm font-bold text-gray-700">TOTAL</td>
+                            <td className="px-6 py-3 text-sm font-bold text-gray-700">
+                                {totals.amount.toLocaleString('en-US', {
+                                    minimumFractionDigits: 3,
+                                    maximumFractionDigits: 3
+                                })}
+                            </td>
+                            <td className="px-6 py-3 text-sm font-bold text-gray-700">
+                                {totals.obligation.toLocaleString('en-US', {
+                                    minimumFractionDigits: 3,
+                                    maximumFractionDigits: 3
+                                })}
+                            </td>
+                            <td className="px-6 py-3 text-sm font-bold text-gray-700">
+                                {totals.unobligated.toLocaleString('en-US', {
+                                    minimumFractionDigits: 3,
+                                    maximumFractionDigits: 3
+                                })}
+                            </td>
+                            <td colSpan={3}></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
