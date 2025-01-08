@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import  { useEffect, useState } from 'react';
 import {
     Table,
     TableBody,
@@ -319,7 +319,7 @@ const AddRecordTable = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody >
-                        {currentRecords.map((allocation: any, index: any) => (
+                        {currentRecords.map((allocation: any, _index: any) => (
                             <TableRow key={allocation.saroID} className="text-primary">
                                 {/* <TableCell>{index + 1}</TableCell> */}
                                 <TableCell className="flex gap-2">

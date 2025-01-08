@@ -16,7 +16,7 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table"
-import {  Edit, Trash2Icon, } from "lucide-react";
+import {  Trash2Icon, } from "lucide-react";
 import Swal from "sweetalert2";
 import FormattedMoney from "@/components/formater/Money";
 import { useEffect, useState } from "react";

@@ -25,7 +25,7 @@ import { useEffect, useState } from "react";
 
 
 function ViewTeam() {
-    const [teamAll, setTeamAll] = useState<any>([])
+    const [_teamAll, setTeamAll] = useState<any>([])
 
     function teamList() {
         axios.get('team/all/', {

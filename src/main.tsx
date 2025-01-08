@@ -1,4 +1,4 @@
-import React from 'react'
+
 import ReactDOM from 'react-dom/client'
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
@@ -24,9 +24,9 @@ const Records = lazy(() =>
   wait(1300).then(() => import("./screens/admin/records/Records.tsx"))
 );
 
-const Login = lazy(() =>
-  wait(1300).then(() => import("./screens/auth/Login.tsx"))
-);
+// const Login = lazy(() =>
+//   wait(1300).then(() => import("./screens/auth/Login.tsx"))
+// );
 const ResetPassword = lazy(() =>
   wait(1300).then(() => import("./screens/auth/ResetPassword.tsx"))
 );

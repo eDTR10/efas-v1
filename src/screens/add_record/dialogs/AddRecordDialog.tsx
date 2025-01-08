@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import  { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { Input } from '@/components/ui/input';
@@ -60,12 +60,12 @@ const AddRecordDialog = ({ isOpen, onClose, onSave }: any) => {
         };
 
         try {
-            const response = await axios.post('/saro/all/', newRecord, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Token ${localStorage.getItem("accessToken")}`,
-                }
-            });
+            // const response = await axios.post('/saro/all/', newRecord, {
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         'Authorization': `Token ${localStorage.getItem("accessToken")}`,
+            //     }
+            // });
 
             Swal.fire({
                 icon: "success",

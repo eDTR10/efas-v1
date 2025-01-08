@@ -3,7 +3,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { Input } from '@/components/ui/input';
 
-const UpdateRecordDialog = ({ isOpen, onClose, record, onSave, getRecords }: any) => {
+const UpdateRecordDialog = ({ isOpen, onClose, record, getRecords }: any) => {
     const [region, setRegion] = useState('');
     const [program, setProgram] = useState('');
     const [fundType, setFundType] = useState('');

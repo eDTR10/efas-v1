@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowBigLeft, Receipt } from "lucide-react";
 import AddRecordTable from "./add_record_table/AddRecordTable";
 import AddRecordDialog from './dialogs/AddRecordDialog';
-import UpdateRecordDialog from './dialogs/UpdateRecordDialog';
+// import UpdateRecordDialog from './dialogs/UpdateRecordDialog';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,9 +11,9 @@ const AddRecordContainer = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const navigate = useNavigate();
 
-    const [records, setRecords] = useState([]);
+    const [_records, _setRecords] = useState([]);
 
-    const handleSave = (newRecord: any) => {
+    const handleSave = (_newRecord: any) => {
         // setRecords([...records, newRecord]);
     };
 
