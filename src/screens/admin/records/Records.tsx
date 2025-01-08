@@ -2,6 +2,17 @@ import axios from './../../../plugin/axios2';
 import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
 
+// Move parseAmount function before component definition
+const parseAmount = (value: string) => {
+    if (!value) return 0;
+    // Remove spaces and handle parentheses
+    const cleanValue = value.trim().replace(/[()]/g, '');
+    // Convert to negative if was in parentheses
+    const multiplier = value.includes('(') ? -1 : 1;
+    // Remove commas and convert to number
+    return Number(cleanValue.replace(/,/g, '')) * multiplier;
+};
+
 function Records() {
     const [data, setData] = useState([
         ["ALLOTMENT NO.", "Date", "PROGRAM", "DESCRIPTION", "OBJ. CODE", "AMOUNT", "TOTAL OBLIGATION", "TOTAL UNOBLIGATED", "NTCA NUMBER", "DATE RECEIVED", "TOTAL"],
@@ -61,7 +72,7 @@ function Records() {
         : data;
 
     const totals = filteredData.slice(1).reduce((acc, row:any) => {
-        const amount = row[12] ? Number(row[12].replace(/,/g, '').trim()) : 0;
+        const amount = row[12] ? parseAmount(row[12]) : 0;
         const matchingRaods = raod.slice(1).filter(raodRow => 
             raodRow[0] === row[7] && 
             raodRow[3] === row[3] && 
@@ -69,7 +80,7 @@ function Records() {
             raodRow.length > 11
         );
         const totalObligation = matchingRaods.reduce((sum, raodRow:any) => {
-            const value = raodRow[14] ? Number(raodRow[14].replace(/,/g, '').trim()) : 0;
+            const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
             return sum + value;
         }, 0);
         const unobligated = amount - totalObligation;
@@ -160,7 +171,7 @@ function Records() {
                             console.log(matchingRaods,` ---${row[11]}`)
 
                             const totalObligation = matchingRaods.reduce((sum, raodRow) => {
-                                const value = raodRow[14] ? Number(raodRow[14].replace(/,/g, '').trim()) : 0;
+                                const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
                                 return sum + value;
                             }, 0);
 
@@ -233,11 +244,11 @@ function Records() {
                                                             </tr>
                                                             {/* Credit Entries */}
                                                             {matchingRaods.map((raodRow, index) => {
-                                                                const initialAmount = Number(row[12].replace(/,/g, ''));
-                                                                const credit = Number(raodRow[14].replace(/,/g, ''));
+                                                                const initialAmount = parseAmount(row[12]);
+                                                                const credit = parseAmount(raodRow[14]);
                                                                 const previousCredits = matchingRaods
                                                                     .slice(0, index)
-                                                                    .reduce((sum, r) => sum + Number(r[14].replace(/,/g, '')), 0);
+                                                                    .reduce((sum, r) => sum + parseAmount(r[14]), 0);
                                                                 const balance = initialAmount - previousCredits - credit;
 
                                                                 return (
@@ -266,30 +277,30 @@ function Records() {
                                                             })}
                                                         </tbody>
                                                         <tfoot className="bg-gray-100">
-                                                            <tr>
-                                                                <td colSpan={4} className="px-4 py-2 font-bold">Total</td>
-                                                                <td className="px-4 py-2 text-right font-bold">
-                                                                   
-                                                                </td>
-                                                                <td className="px-4 py-2 text-right font-bold">
-                                                                    {matchingRaods.reduce((sum, raodRow) => 
-                                                                        sum + Number(raodRow[14].replace(/,/g, '')), 0
-                                                                    ).toLocaleString('en-US', {
-                                                                        minimumFractionDigits: 2,
-                                                                        maximumFractionDigits: 2
-                                                                    })}
-                                                                </td>
-                                                                <td className="px-4 py-2 text-right font-bold">
-                                                                    {(Number(row[12].replace(/,/g, '')) - 
-                                                                        matchingRaods.reduce((sum, raodRow) => 
-                                                                            sum + Number(raodRow[14].replace(/,/g, '')), 0
-                                                                        )).toLocaleString('en-US', {
-                                                                        minimumFractionDigits: 2,
-                                                                        maximumFractionDigits: 2
-                                                                    })}
-                                                                </td>
-                                                            </tr>
-                                                        </tfoot>
+    <tr>
+        <td colSpan={4} className="px-4 py-2 font-bold">Total</td>
+        <td className="px-4 py-2 text-right font-bold">
+            
+        </td>
+        <td className="px-4 py-2 text-right font-bold">
+            {matchingRaods.reduce((sum, raodRow) => 
+                sum + parseAmount(raodRow[14]), 0
+            ).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}
+        </td>
+        <td className="px-4 py-2 text-right font-bold">
+            {(parseAmount(row[12]) - 
+                matchingRaods.reduce((sum, raodRow) => 
+                    sum + parseAmount(raodRow[14]), 0
+                )).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}
+        </td>
+    </tr>
+</tfoot>
                                                     </table>
                                                 </div>
                                             </td>
