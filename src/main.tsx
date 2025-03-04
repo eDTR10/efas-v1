@@ -42,10 +42,10 @@ const router = createBrowserRouter([
   {
 
     path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/login" />,
+    element: <Navigate to="/efas-v1/records" />,
   },
   {
-    path: "/efas-v1/login",
+    path: "/efas-v1/records",
     element: <>
       <Suspense fallback={<Loader />}>
         <Records/>
