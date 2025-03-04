@@ -1,1 +1,0 @@
-import{c as a}from"./index-518854f0.js";const o=a("Loader2",[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]]),e="/efas-v1/assets/r10-bg-5c6ac8f3.jpg",c="/efas-v1/assets/DICT-Logo-Final-2-300x153-071ef709.png";export{c as L,e as R,o as a};
