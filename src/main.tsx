@@ -24,6 +24,11 @@ const Records = lazy(() =>
   wait(1300).then(() => import("./screens/admin/records/Records.tsx"))
 );
 
+const Records2 = lazy(() =>
+  wait(1300).then(() => import("./screens/admin/records/Records2.tsx"))
+);
+
+
 // const Login = lazy(() =>
 //   wait(1300).then(() => import("./screens/auth/Login.tsx"))
 // );
@@ -42,13 +47,21 @@ const router = createBrowserRouter([
   {
 
     path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/records" />,
+    element: <Navigate to="/efas-v1/records2024" />,
   },
   {
-    path: "/efas-v1/records",
+    path: "/efas-v1/records2024",
     element: <>
       <Suspense fallback={<Loader />}>
         <Records/>
+      </Suspense>
+    </>,
+  },
+  {
+    path: "/efas-v1/records2025",
+    element: <>
+      <Suspense fallback={<Loader />}>
+        <Records2/>
       </Suspense>
     </>,
   },

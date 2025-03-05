@@ -17,62 +17,55 @@ const parseAmount = (value: string) => {
 
 function Records() {
 
+
   const [data, setData] = useState([
     [
+      "REGION",
+      "DATE RECD IN EMAIL",
+      "DATE OF SARO",
       "ALLOTMENT NO.",
-      "Date",
       "PROGRAM",
+      "Notes/Validity",
+      "Total Amount",
+      "PAP",
       "DESCRIPTION",
-      "OBJ. CODE",
+      "CLASS TYPE",
+      "FUND TYPE", 
+      "Object Code no.",
+      "Object Code Desc",
       "AMOUNT",
-      "TOTAL OBLIGATION",
-      "TOTAL UNOBLIGATED",
-      "NTCA NUMBER",
-      "DATE RECEIVED",
-      "TOTAL",
-    ],
-    [
-      "2024-01-0002",
-      "01/19/2024",
-      "PS",
-      "Traveling Expenses - Local",
-      "5020101000",
-      479300.0,
-      293442.07,
-      185857.93,
-      "NTCA-12346",
-      "01/20/2024",
-      838655.24,
-    ],
+      "PURPOSE",
+      "REGION X",
+      "NCA AMOUNT",
+      "DATE",
+      "NCA NO.",
+      "BALANCE"
+    ]
   ]);
 
   const [raod, setRaod] = useState([
     [
-      "ALLOTMENT NO.",
-      "Date",
-      "PROGRAM",
-      "DESCRIPTION",
-      "OBJ. CODE",
-      "AMOUNT",
-      "TOTAL OBLIGATION",
-      "TOTAL UNOBLIGATED",
-      "NTCA NUMBER",
-      "DATE RECEIVED",
-      "TOTAL",
-    ],
-    [
-      "2024-01-0002",
-      "01/19/2024",
-      "PS",
-      "Traveling Expenses - Local",
-      "5020101000",
-      479300.0,
-      293442.07,
-      185857.93,
-      "NTCA-12346",
-      "01/20/2024",
-      838655.24,
-    ],
+      "PAP",
+      "PAP CODE", 
+      "DATE OF SARO",
+      "SARO NO",
+      "ALLOTMENT AMOUNT",
+      "OBJECT TITLE",
+      "OBJECT CODE",
+      "DATE OF OBLIGATION",
+      "Description - Fund Type",
+      "CLASS TYPE",
+      "fund source",
+      "ORS NO.",
+      "NAME OF CLAIMANT",
+      "PARTICULARS",
+      "OBLIGATED AMOUNT",
+      "DATE",
+      "ADA/CHECK",
+      "CASH",
+      "NON TRA",
+      "BALANCE"
+    ]
   ]);
 
   const [selectedAllotment, setSelectedAllotment] = useState("");
@@ -120,7 +113,7 @@ function Records() {
 
   function getData() {
     axios
-      .get("1-iMx8U7brob8Gs-HuPhEkF8pIyu1aPOGLSmhwFa9oog/values/MDS REG R10", {
+      .get("11pC_pyDKZa797p_HUwt_PCfb7PLJUAtMDsfZ0MPepB4/values/MDS Regular R10", {
         headers: {
           Authorization:
             "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
@@ -136,7 +129,7 @@ function Records() {
 
   function getDataRAOD() {
     axios
-      .get("1bZCLinN4S-F-jU6jsA90uxxXRCT5uUjcI9s6Mt5_QeI/values/year2024", {
+      .get("1U4P9Up-0xNUlSsIX2DiIAIUZjnliHK8nAKMhQB7wXik/values/2025", {
         headers: {
           Authorization:
             "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
@@ -149,14 +142,14 @@ function Records() {
         console.log(error);
       });
   }
-
   useEffect(() => {
     getData();
     getDataRAOD();
   }, []);
 
-  const allotment = [...new Set(data.slice(1).map((row) => row[3]))];
-  const programs = [...new Set(data.slice(1).map((row) => row[7]))];
+  // Update these lines to get programs and allotments from correct columns
+  const allotment = [...new Set(data.slice(1).map((row) => row[3]))]; // ALLOTMENT NO.
+  const programs = [...new Set(data.slice(1).map((row) => row[8]))];  // PROGRAM from column 4 (PROGRAM)
 
   const programOptions = programs.map((program) => ({
     value: program,
@@ -167,25 +160,44 @@ function Records() {
     label: allotment,
   }));
 
-  const filteredData = selectedProgram
-    ? data.filter(
-        (row, index) =>
-          index === 0 ||
-          (row[3] === selectedAllotment && row[7] === selectedProgram)
-      )
-    : data;
+  // Update the filtering logic
+  const filteredData = data.filter((row, index) => {
+    if (index === 0) return true; // Always include header row
+    
+    if (!selectedProgram && !selectedAllotment) return true; // Show all if nothing selected
+    
+    if (selectedProgram && selectedAllotment) {
+      return row[8] === selectedProgram && row[3] === selectedAllotment;
+    }
+    
+    if (selectedProgram) {
+      return row[8] === selectedProgram;
+    }
+    
+    if (selectedAllotment) {
+      return row[3] === selectedAllotment;
+    }
+
+    return true;
+  });
+
+  // Add console logs to debug
+  useEffect(() => {
+    console.log("Selected Program:", selectedProgram);
+    console.log("Selected Allotment:", selectedAllotment);
+    console.log("Filtered Data Length:", filteredData.length);
+  }, [selectedProgram, selectedAllotment, filteredData]);
 
   const totals = filteredData.slice(1).reduce(
     (acc, row: any) => {
-      const amount = row[12] ? parseAmount(row[12]) : 0;
+      const amount = row[13] ? parseAmount(row[13]) : 0;
       const matchingRaods = raod
         .slice(1)
         .filter(
           (raodRow) =>
-            raodRow[0] === row[7] &&
+            raodRow[1] === row[7] &&
             raodRow[3] === row[3] &&
-            raodRow[5] === row[11] &&
-            raodRow.length > 11
+            raodRow[6] === row[11]
         );
       const totalObligation = matchingRaods.reduce((sum, raodRow: any) => {
         const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
@@ -254,7 +266,7 @@ function Records() {
       </div>
 
       <div className="relative overflow-auto h-[70vh]">
-        {filteredData.length <= 1 ? (
+        {filteredData.length <= 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500 text-lg">
               No records found! Kindly select a Program and Allotment if it is empty.
@@ -309,38 +321,38 @@ function Records() {
                     {filteredData[1][1]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][7]}
+                    {filteredData[1][4]}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {filteredData[1][8]}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {filteredData[1][11]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {filteredData[1][13]}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][6]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][5]}
-                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][5]}
+                    {filteredData[1][13]}
                   </td>
                 </tr>
               )}
               {filteredData.slice(1).map((row: any, rowIndex) => {
+
                 const matchingRaods: any[] = raod
                   .slice(1)
                   .filter(
                     (raodRow) =>
-                      raodRow[0] === row[7] &&
-                      raodRow[3] === row[3] &&
-                      raodRow[5] === row[11] &&
-                      raodRow.length > 11
+                      raodRow[1] === row[7] && // PAP CODE matches PAP
+                      raodRow[3] === row[3] && // SARO NO matches ALLOTMENT NO.
+                      raodRow[6] === row[11]   // OBJECT CODE matches Object Code no.
                   );
 
-                console.log(matchingRaods, ` ---${row[11]}`);
+                console.log(`${row[8]} - ${row[3]} - ${row[11]}`);
 
                 const totalObligation = matchingRaods.reduce((sum, raodRow) => {
                   const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
@@ -349,7 +361,7 @@ function Records() {
 
                 const cleanNumber = (value: string) =>
                   Number(value.replace(/,/g, "").trim());
-                const amount = row[12] ? cleanNumber(row[12]) : 0;
+                const amount = row[13] ? cleanNumber(row[13]) : 0;
                 const unobligated = amount - totalObligation;
 
                 return (
@@ -367,16 +379,16 @@ function Records() {
                         {selectedProgram && selectedAllotment ? "" : row[1]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {selectedProgram && selectedAllotment ? "" : row[7]}
+                        {selectedProgram && selectedAllotment ? "" : row[8]}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {row[8]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {row[11]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {row[10]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {row[12]}
+                        {row[13]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 font-gsemibold hover:underline">
                         {totalObligation
@@ -394,9 +406,15 @@ function Records() {
                             })
                           : ""}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500"></td>
-                      <td className="px-6 py-4 text-sm text-gray-500"></td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {row[18]}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {row[17]}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {row[19]}
+                      </td>
                     </tr>
                     {selectedRow === rowIndex && matchingRaods.length > 0 && (
                       <tr>
@@ -441,16 +459,18 @@ function Records() {
                                     Initial Amount
                                   </td>
                                   <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                    {row[12]}
+                                    {row[13]}
                                   </td>
                                   <td></td>
                                   <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                    {row[12]}
+                                    {row[13]}
                                   </td>
                                 </tr>
                                 {/* Credit Entries */}
                                 {matchingRaods.map((raodRow, index) => {
-                                  const initialAmount = parseAmount(row[12]);
+
+                                  
+                                  const initialAmount = parseAmount(row[13]);
                                   const credit = parseAmount(raodRow[14]);
                                   const previousCredits = matchingRaods
                                     .slice(0, index)
@@ -512,7 +532,7 @@ function Records() {
                                   </td>
                                   <td className="px-4 py-2 text-right font-bold">
                                     {(
-                                      parseAmount(row[12]) -
+                                      parseAmount(row[13]) -
                                       matchingRaods.reduce(
                                         (sum, raodRow) =>
                                           sum + parseAmount(raodRow[14]),
