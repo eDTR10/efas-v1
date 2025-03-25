@@ -312,37 +312,47 @@ function Records() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
+              
+            {/* {console.log(filteredData[1])} */}
               {selectedProgram && selectedAllotment && filteredData[1] && (
+
+                
                 <tr>
+                 
+                  
+
+                  
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][3]}
+                    {(filteredData[1][3])}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {filteredData[1][1]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][4]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
                     {filteredData[1][8]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][11]}
+                    {filteredData[1][14]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][13]}
+                    {filteredData[1][7]}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {filteredData[1][6]}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500"></td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][13]}
+                    {filteredData[1][6]}
                   </td>
                 </tr>
               )}
               {filteredData.slice(1).map((row: any, rowIndex) => {
-
+                console.log("data here");
+             
+                console.log(row);
                 const matchingRaods: any[] = raod
                   .slice(1)
                   .filter(
@@ -382,7 +392,7 @@ function Records() {
                         {selectedProgram && selectedAllotment ? "" : row[8]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {row[8]}
+                        {row[12]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {row[11]}
@@ -413,7 +423,7 @@ function Records() {
                         {row[17]}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {row[19]}
+                       
                       </td>
                     </tr>
                     {selectedRow === rowIndex && matchingRaods.length > 0 && (

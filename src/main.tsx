@@ -47,7 +47,7 @@ const router = createBrowserRouter([
   {
 
     path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/records2024" />,
+    element: <Navigate to="/efas-v1/records2025" />,
   },
   {
     path: "/efas-v1/records2024",
