@@ -477,50 +477,58 @@ function Records() {
                                   </td>
                                 </tr>
                                 {/* Credit Entries */}
-                                {matchingRaods.map((raodRow, index) => {
+                                {matchingRaods
+  .filter(raodRow => {
+    // Skip rows with undefined or incomplete OBR numbers
+    if (!raodRow[9] || !raodRow[10] || !raodRow[11] || 
+        raodRow[11] === 'undefined' || 
+        `${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`.includes('undefined')) {
+      return false;
+    }
+    return true;
+  })
+  .map((raodRow, index) => {
+    const initialAmount = parseAmount(row[13]);
+    const credit = parseAmount(raodRow[14]);
+    const previousCredits = matchingRaods
+      .slice(0, index)
+      .filter(r => r[11] && r[11] !== 'undefined') // Only consider valid entries
+      .reduce(
+        (sum, r) => sum + parseAmount(r[14]),
+        0
+      );
+    const balance = initialAmount - previousCredits - credit;
 
-                                  
-                                  const initialAmount = parseAmount(row[13]);
-                                  const credit = parseAmount(raodRow[14]);
-                                  const previousCredits = matchingRaods
-                                    .slice(0, index)
-                                    .reduce(
-                                      (sum, r) => sum + parseAmount(r[14]),
-                                      0
-                                    );
-                                  const balance =
-                                    initialAmount - previousCredits - credit;
-
-                                  return (
-                                    <tr key={index} className="hover:bg-gray-50">
-                                      <td className="px-4 py-2 text-sm text-gray-500">
-                                        {raodRow[12]}
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-500">
-                                        {raodRow[7]}
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-500">
-                                        {raodRow[1]}
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-500">
-                                        {`${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`}
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-500 text-right"></td>
-                                      <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                        {credit.toLocaleString("en-US", {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })}
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                        {balance.toLocaleString("en-US", {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
+    return (
+      <tr key={index} className="hover:bg-gray-50">
+        <td className="px-4 py-2 text-sm text-gray-500">
+          {raodRow[12]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500">
+          {raodRow[7]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500">
+          {raodRow[1]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500">
+          {`${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right"></td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {credit.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {balance.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </td>
+      </tr>
+    );
+  })}
                               </tbody>
                               <tfoot className="bg-gray-100">
                                 <tr>
