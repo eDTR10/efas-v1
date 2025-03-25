@@ -440,7 +440,7 @@ function Records() {
                                     Details
                                   </th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                    Date
+                                  DATE OF OBLIGATION
                                   </th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                                     Payee
@@ -456,6 +456,24 @@ function Records() {
                                   </th>
                                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
                                     Balance
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                  ORS NO.
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                  PARTICULARS
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                    Date
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                    ADA/CHECK
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                    CASH 
+                                  </th>
+                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                                  NON TRA 
                                   </th>
                                 </tr>
                               </thead>
@@ -502,7 +520,7 @@ function Records() {
     return (
       <tr key={index} className="hover:bg-gray-50">
         <td className="px-4 py-2 text-sm text-gray-500">
-          {raodRow[12]}
+          {raodRow[12]} 
         </td>
         <td className="px-4 py-2 text-sm text-gray-500">
           {raodRow[7]}
@@ -525,6 +543,24 @@ function Records() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[11]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[13]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[15]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[16]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[17]}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-500 text-right">
+          {raodRow[18]}
         </td>
       </tr>
     );
@@ -598,6 +634,7 @@ function Records() {
                     maximumFractionDigits: 3,
                   })}
                 </td>
+
                 <td colSpan={3}></td>
               </tr>
             </tfoot>
