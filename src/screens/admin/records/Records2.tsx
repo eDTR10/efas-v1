@@ -518,7 +518,7 @@ function Records() {
     const balance = initialAmount - previousCredits - credit;
 
     return (
-      <tr key={index} className="hover:bg-gray-50">
+      <tr key={index} className=" cursor-pointer hover:bg-[#bcf3cd53]">
         <td className="px-4 py-2 text-sm text-gray-500">
           {raodRow[12]} 
         </td>
