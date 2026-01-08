@@ -47,7 +47,7 @@ const router = createBrowserRouter([
   {
 
     path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/records2025" />,
+    element: <Navigate to="/efas-v1/records" />,
   },
   {
     path: "/efas-v1/records2024",
@@ -58,7 +58,7 @@ const router = createBrowserRouter([
     </>,
   },
   {
-    path: "/efas-v1/records2025",
+    path: "/efas-v1/records",
     element: <>
       <Suspense fallback={<Loader />}>
         <Records2/>

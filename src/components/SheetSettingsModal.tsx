@@ -67,6 +67,8 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
           <h2 className="text-2xl font-bold text-gray-800">
             Google Sheets Configuration
           </h2>
+
+          
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -74,6 +76,7 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
             <X size={24} />
           </button>
         </div>
+        <p className=" text-xs text-red-400 italic">*Invite ian.caulin@dict.gov.ph to your sheet if it doesnt work on efas</p>
 
         <div className="space-y-6">
           {/* MDS Regular R10 Settings */}
@@ -120,7 +123,7 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
           {/* RAOD 2024 Settings */}
           <div className="border-l-4 border-green-500 pl-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-3">
-              RAOD 2024/2025 (Obligations Data)
+              RAOD (Obligations Data)
             </h3>
             <div className="space-y-3">
               <div>
@@ -135,7 +138,7 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
                   placeholder="Enter Google Sheet ID"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Can be the same or different spreadsheet
+                  Found in the URL: docs.google.com/spreadsheets/d/ YOUR_ID_HERE
                 </p>
               </div>
               <div>
