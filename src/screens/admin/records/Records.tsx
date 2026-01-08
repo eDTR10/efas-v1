@@ -1,7 +1,9 @@
-import axios from "./../../../plugin/axios2";
+import { readSheetData } from "./../../../plugin/googleSheets";
+import SheetSettingsModal, { getSheetSettings } from "./../../../components/SheetSettingsModal";
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { useSearchParams }  from "react-router-dom"; // Add this import
+import { Settings } from "lucide-react";
 
 
 // Move parseAmount function before component definition
@@ -16,6 +18,8 @@ const parseAmount = (value: string) => {
 };
 
 function Records() {
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [data, setData] = useState([
     [
@@ -119,34 +123,28 @@ function Records() {
   };
 
   function getData() {
-    axios
-      .get("1-iMx8U7brob8Gs-HuPhEkF8pIyu1aPOGLSmhwFa9oog/values/MDS REG R10", {
-        headers: {
-          Authorization:
-            "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
-        },
-      })
-      .then((response) => {
-        setData(response.data.values);
+    const settings = getSheetSettings();
+    readSheetData(settings.raod2024Id, `${settings.mdsRegR10Sheet}!A:K`)
+      .then((values) => {
+        if (values) {
+          setData(values);
+        }
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Error fetching MDS REG R10 sheet:", error);
       });
   }
 
   function getDataRAOD() {
-    axios
-      .get("1bZCLinN4S-F-jU6jsA90uxxXRCT5uUjcI9s6Mt5_QeI/values/year2024", {
-        headers: {
-          Authorization:
-            "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
-        },
-      })
-      .then((response) => {
-        setRaod(response.data.values);
+    const settings = getSheetSettings();
+    readSheetData(settings.raod2024Id, `${settings.raod2024Sheet}!A:O`)
+      .then((values) => {
+        if (values) {
+          setRaod(values);
+        }
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Error fetching year2024 sheet:", error);
       });
   }
 
@@ -204,6 +202,14 @@ function Records() {
 
   return (
     <div className="h-full  w-[100%] mt-[10vh]">
+      <SheetSettingsModal 
+        isOpen={settingsOpen} 
+        onClose={() => {
+          setSettingsOpen(false);
+          getData();
+          getDataRAOD();
+        }}
+      />
 
       {/* <div className=" flex gap-5">
         <Button variant="outline">2024</Button>
@@ -251,6 +257,14 @@ function Records() {
             className="mt-1"
           />
         </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="mt-6 p-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition flex items-center gap-2"
+          title="Configure Google Sheets"
+        >
+          <Settings size={20} />
+          <span className="text-sm">Settings</span>
+        </button>
       </div>
 
       <div className="relative overflow-auto h-[70vh]">

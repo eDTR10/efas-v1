@@ -1,7 +1,9 @@
-import axios from "./../../../plugin/axios2";
+import { readSheetData } from "./../../../plugin/googleSheets";
+import SheetSettingsModal, { getSheetSettings } from "./../../../components/SheetSettingsModal";
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { useSearchParams }  from "react-router-dom"; // Add this import
+import { Settings } from "lucide-react";
 
 
 // Move parseAmount function before component definition
@@ -12,11 +14,15 @@ const parseAmount = (value: string) => {
   // Convert to negative if was in parentheses
   const multiplier = value.includes("(") ? -1 : 1;
   // Remove commas and convert to number
-  return Number(cleanValue.replace(/,/g, "")) * multiplier;
+  const parsed = Number(cleanValue.replace(/,/g, ""));
+  // Return 0 if NaN, otherwise return the parsed value
+  return isNaN(parsed) ? 0 : parsed * multiplier;
 };
 
 function Records() {
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [_sheetSettings, setSheetSettings] = useState(getSheetSettings());
 
   const [data, setData] = useState([
     [
@@ -112,34 +118,28 @@ function Records() {
   };
 
   function getData() {
-    axios
-      .get("11pC_pyDKZa797p_HUwt_PCfb7PLJUAtMDsfZ0MPepB4/values/MDS Regular R10", {
-        headers: {
-          Authorization:
-            "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
-        },
-      })
-      .then((response) => {
-        setData(response.data.values);
+    const settings = getSheetSettings();
+    readSheetData(settings.mdsRegR10Id, `${settings.mdsRegR10Sheet}`)
+      .then((values) => {
+        if (values) {
+          setData(values);
+        }
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Error fetching MDS Regular R10 sheet:", error);
       });
   }
 
   function getDataRAOD() {
-    axios
-      .get("1U4P9Up-0xNUlSsIX2DiIAIUZjnliHK8nAKMhQB7wXik/values/2025", {
-        headers: {
-          Authorization:
-            "Token 5f4a6fef4cb29b33296c4c9909cc8db05b86043141ba158a40dfbdc4d5a11a9a",
-        },
-      })
-      .then((response) => {
-        setRaod(response.data.values);
+    const settings = getSheetSettings();
+    readSheetData(settings.raod2024Id, `${settings.raod2024Sheet}`)
+      .then((values) => {
+        if (values) {
+          setRaod(values);
+        }
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Error fetching 2025 sheet:", error);
       });
   }
   useEffect(() => {
@@ -171,7 +171,7 @@ function Records() {
     }
     
     if (selectedProgram) {
-      return row[8] === selectedProgram;
+      return row[8] === selectedProgram; // Include all rows matching program
     }
     
     if (selectedAllotment) {
@@ -195,10 +195,13 @@ function Records() {
         .slice(1)
         .filter(
           (raodRow) =>
-            raodRow[1] === row[7] &&
             raodRow[3] === row[3] &&
             raodRow[6] === row[11]
         );
+
+        console.log("Calculating totals for row:", row);
+
+        console.log("Matching RAODs for totals calculation:", matchingRaods);
       const totalObligation = matchingRaods.reduce((sum, raodRow: any) => {
         const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
         return sum + value;
@@ -215,391 +218,256 @@ function Records() {
   );
 
   return (
-    <div className="h-full  w-[100%] mt-[10vh]">
+    <div className="h-full w-full bg-gray-50">
+      <SheetSettingsModal 
+        isOpen={settingsOpen} 
+        onClose={() => {
+          setSettingsOpen(false);
+          setSheetSettings(getSheetSettings());
+          getData();
+          getDataRAOD();
+        }}
+      />
 
-      {/* <div className=" flex gap-5">
-        <Button variant="outline">2024</Button>
-        <Button variant="outline">2025</Button>
-
+      {/* Header Section */}
+      {/* <div className="bg-white border-b border-gray-200 px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Financial Records Management</h1>
+        <p className="text-gray-600">Monitor and analyze budget allocations, obligations, and unobligated amounts</p>
       </div> */}
-      <div className="w-[100%] px-[2vw] flex items-center gap-5">
-        <div className="mb-4  w-full">
-          <label
-            htmlFor="program"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Select Program
-          </label>
-          <Select
-            id="program"
-            name="program"
-            options={programOptions}
-            value={programOptions.find(
-              (option) => option.value === selectedProgram
-            )}
-            onChange={handleProgramChange}
-            isClearable
-            placeholder="Search Program"
-            className="mt-1"
-          />
-        </div>
-        <div className="mb-4 w-full">
-          <label
-            htmlFor="allotment"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Select Allotment
-          </label>
-          <Select
-            id="allotment"
-            name="allotment"
-            options={allotmentOptions}
-            value={allotmentOptions.find(
-              (option) => option.value === selectedAllotment
-            )}
-            onChange={handleAllotmentChange}
-            isClearable
-            placeholder="Search Allotment"
-            className="mt-1"
-          />
-        </div>
-      </div>
 
-      <div className="relative overflow-auto h-[70vh]">
-        {filteredData.length <= 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 text-lg">
-              No records found! Kindly select a Program and Allotment if it is empty.
-            </p>
+      <div className="p-8">
+        {/* Filter Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8 border border-gray-200">
+          <div className="flex items-end gap-6">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Program</label>
+              <Select
+                id="program"
+                name="program"
+                options={programOptions}
+                value={programOptions.find((option) => option.value === selectedProgram)}
+                onChange={handleProgramChange}
+                isClearable
+                placeholder="Choose program..."
+                className="mt-1"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Allotment</label>
+              <Select
+                id="allotment"
+                name="allotment"
+                options={allotmentOptions}
+                value={allotmentOptions.find((option) => option.value === selectedAllotment)}
+                onChange={handleAllotmentChange}
+                isClearable
+                placeholder="Choose allotment..."
+                className="mt-1"
+              />
+            </div>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2 font-medium"
+            >
+              <Settings size={18} />
+              Settings
+            </button>
           </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200 border">
-            <thead className="bg-[#e3ffe5] sticky top-0 border border-border">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
-                  ALLOTMENT NO.
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  PROGRAM
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[300px]">
-                  DESCRIPTION
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  OBJ. CODE
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  AMOUNT
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  TOTAL OBLIGATION
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  TOTAL UNOBLIGATED
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  NTCA NUMBER
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  DATE RECEIVED
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  TOTAL
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        </div>
+
+        {/* Stats Cards */}
+
+
+        {/* Records Table Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+   
+
+          <div className="overflow-auto max-h-[70vh]">
+            {filteredData.length <= 1 ? (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-gray-500 text-lg">No records found. Select Program and Allotment to view data.</p>
+              </div>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">ALLOTMENT NO.</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">PROGRAM</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">DESCRIPTION</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">OBJ. CODE</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">AMOUNT</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">TOTAL OBLIGATION</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">TOTAL UNOBLIGATED</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">NTCA NUMBER</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">DATE RECEIVED</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
               
             {/* {console.log(filteredData[1])} */}
               {selectedProgram && selectedAllotment && filteredData[1] && (
-
-                
-                <tr>
-                 
-                  
-
-                  
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {(filteredData[1][3])}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][1]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][8]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][14]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][7]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][6]}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500"></td>
-                  <td className="px-6 py-4 text-sm text-gray-500"></td>
-                  <td className="px-6 py-4 text-sm text-gray-500"></td>
-                  <td className="px-6 py-4 text-sm text-gray-500"></td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {filteredData[1][6]}
-                  </td>
+                <tr className="bg-blue-50 hover:bg-blue-100">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{filteredData[1][3]}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][1]}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][8]}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][14]}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][7]}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][6]}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700"></td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700"></td>
+                  <td className="px-6 py-4 text-sm text-gray-600"></td>
+                  <td className="px-6 py-4 text-sm text-gray-600"></td>
                 </tr>
               )}
               {filteredData.slice(1).map((row: any, rowIndex) => {
-                console.log("data here");
-             
-                console.log(row);
                 const matchingRaods: any[] = raod
                   .slice(1)
                   .filter(
-                    (raodRow) =>
-                      raodRow[1] === row[7] && // PAP CODE matches PAP
-                      raodRow[3] === row[3] && // SARO NO matches ALLOTMENT NO.
-                      raodRow[6] === row[11]   // OBJECT CODE matches Object Code no.
+                    (raodRow) => {
+                      const match = raodRow[3] === row[3] && raodRow[6] === row[11];
+                      return match;
+                    }
                   );
-
-                console.log(`${row[8]} - ${row[3]} - ${row[11]}`);
 
                 const totalObligation = matchingRaods.reduce((sum, raodRow) => {
                   const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
                   return sum + value;
                 }, 0);
 
-                const cleanNumber = (value: string) =>
-                  Number(value.replace(/,/g, "").trim());
+                const cleanNumber = (value: string) => {
+                  const num = Number(value.replace(/,/g, "").trim());
+                  return isNaN(num) ? 0 : num;
+                };
                 const amount = row[13] ? cleanNumber(row[13]) : 0;
                 const unobligated = amount - totalObligation;
 
                 return (
                   <React.Fragment key={rowIndex}>
                     <tr
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() =>
-                        setSelectedRow(selectedRow === rowIndex ? null : rowIndex)
-                      }
+                      className="hover:bg-gray-50 transition cursor-pointer border-b border-gray-200"
+                      onClick={() => {
+                        const rowId = `${row[3]}-${row[8]}-${row[11]}`;
+                        setSelectedRow(selectedRow === rowId ? null : rowId);
+                      }}
                     >
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {selectedProgram && selectedAllotment ? "" : row[3]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {selectedProgram && selectedAllotment ? "" : row[1]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {selectedProgram && selectedAllotment ? "" : row[8]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {row[12]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {row[11]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {row[13]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 font-gsemibold hover:underline">
+                      <td className="px-6 py-4 text-sm font-semibold text-green-600 hover:underline">
                         {totalObligation
                           ? totalObligation.toLocaleString("en-US", {
-                              minimumFractionDigits: 3,
-                              maximumFractionDigits: 3,
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
                             })
-                          : ""}
+                          : "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 font-gsemibold  hover:underline">
+                      <td className="px-6 py-4 text-sm font-semibold text-red-600 hover:underline">
                         {unobligated
                           ? unobligated.toLocaleString("en-US", {
-                              minimumFractionDigits: 3,
-                              maximumFractionDigits: 3,
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
                             })
-                          : ""}
+                          : "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {row[18]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {row[17]}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                       
-                      </td>
                     </tr>
-                    {selectedRow === rowIndex && matchingRaods.length > 0 && (
+                    {selectedRow === `${row[3]}-${row[8]}-${row[11]}` && matchingRaods.length > 0 && (
                       <tr>
-                        <td colSpan={11} className="px-6 py-4">
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-sm font-bold mb-2">
-                              Breakdown of Obligations
-                            </h4>
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                    Details
-                                  </th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  DATE OF OBLIGATION
-                                  </th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                    Payee
-                                  </th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                    OBRs No.
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    Debit/Amount
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    Credit
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    Balance
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                  ORS NO.
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                  PARTICULARS
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    Date
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    ADA/CHECK
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                    CASH 
-                                  </th>
-                                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
-                                  NON TRA 
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {/* Initial Amount Row */}
-                                <tr className="hover:bg-gray-50">
-                                  <td
-                                    colSpan={4}
-                                    className="px-4 py-2 text-sm text-gray-500"
-                                  >
-                                    Initial Amount
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                    {row[13]}
-                                  </td>
-                                  <td></td>
-                                  <td className="px-4 py-2 text-sm text-gray-500 text-right">
-                                    {row[13]}
-                                  </td>
-                                </tr>
-                                {/* Credit Entries */}
-                                {matchingRaods
-  .filter(raodRow => {
-    // Skip rows with undefined or incomplete OBR numbers
-    if (!raodRow[9] || !raodRow[10] || !raodRow[11] || 
-        raodRow[11] === 'undefined' || 
-        `${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`.includes('undefined')) {
-      return false;
-    }
-    return true;
-  })
-  .map((raodRow, index) => {
-    const initialAmount = parseAmount(row[13]);
-    const credit = parseAmount(raodRow[14]);
-    const previousCredits = matchingRaods
-      .slice(0, index)
-      .filter(r => r[11] && r[11] !== 'undefined') // Only consider valid entries
-      .reduce(
-        (sum, r) => sum + parseAmount(r[14]),
-        0
-      );
-    const balance = initialAmount - previousCredits - credit;
+                        <td colSpan={10} className="px-6 py-3">
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-300 shadow-sm">
+                            <h4 className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wide">📋 Obligations Breakdown</h4>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-xs">
+                                <thead>
+                                  <tr className="bg-blue-200">
+                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Name</th>
+                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Date</th>
+                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">OBRs</th>
+                                    <th className="px-2 py-1.5 text-right font-semibold text-blue-900">Credit</th>
+                                    <th className="px-2 py-1.5 text-right font-semibold text-blue-900">Balance</th>
+                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Particulars</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-blue-200">
+                                  {/* Initial Amount Row */}
+                                  <tr className="bg-blue-100">
+                                    <td colSpan={3} className="px-2 py-1 font-semibold text-blue-900">Initial Amount</td>
+                                    <td className="px-2 py-1 text-right font-semibold text-blue-900"></td>
+                                    <td className="px-2 py-1 text-right font-semibold text-blue-900">{row[13]}</td>
+                                    <td></td>
+                                  </tr>
+                                  {/* Credit Entries */}
+                                  {matchingRaods.map((raodRow, index) => {
+                                    const initialAmount = parseAmount(row[13]);
+                                    const credit = parseAmount(raodRow[14]);
+                                    const previousCredits = matchingRaods
+                                      .slice(0, index)
+                                      .reduce((sum, r) => sum + parseAmount(r[14]), 0);
+                                    const balance = initialAmount - previousCredits - credit;
 
-    return (
-      <tr key={index} className=" cursor-pointer hover:bg-[#bcf3cd53]">
-        <td className="px-4 py-2 text-sm text-gray-500">
-          {raodRow[12]} 
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500">
-          {raodRow[7]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500">
-          {raodRow[1]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500">
-          {`${raodRow[9]}-${raodRow[10]}-${raodRow[11]}`}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right"></td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {credit.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {balance.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[11]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[13]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[15]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[16]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[17]}
-        </td>
-        <td className="px-4 py-2 text-sm text-gray-500 text-right">
-          {raodRow[18]}
-        </td>
-      </tr>
-    );
-  })}
-                              </tbody>
-                              <tfoot className="bg-gray-100">
-                                <tr>
-                                  <td colSpan={4} className="px-4 py-2 font-bold">
-                                    Total
-                                  </td>
-                                  <td className="px-4 py-2 text-right font-bold"></td>
-                                  <td className="px-4 py-2 text-right font-bold">
-                                    {matchingRaods
-                                      .reduce(
-                                        (sum, raodRow) =>
-                                          sum + parseAmount(raodRow[14]),
-                                        0
-                                      )
-                                      .toLocaleString("en-US", {
-                                        minimumFractionDigits: 2,
+                                    return (
+                                      <tr key={index} className="hover:bg-blue-50 transition text-gray-700">
+                                        <td className="px-2 py-1 text-xs truncate">{raodRow[12]}</td>
+                                        <td className="px-2 py-1 text-xs">{raodRow[7]}</td>
+                                        <td className="px-2 py-1 text-xs truncate">{`${raodRow[9]}-${raodRow[10]}`}</td>
+                                        <td className="px-2 py-1 text-right font-medium text-green-600">
+                                          {credit.toLocaleString("en-US", {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 2,
+                                          })}
+                                        </td>
+                                        <td className="px-2 py-1 text-right font-medium text-indigo-600">
+                                          {balance.toLocaleString("en-US", {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 2,
+                                          })}
+                                        </td>
+                                        <td className="px-2 py-1 text-xs truncate hover:truncate-none hover:whitespace-normal hover:break-words max-w-xs hover:max-w-none hover:bg-white hover:p-2 hover:rounded hover:border hover:border-gray-300 hover:z-20 relative">
+                                          {raodRow[13]}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot className="bg-blue-200">
+                                  <tr>
+                                    <td colSpan={3} className="px-2 py-1 font-bold text-blue-900">TOTAL</td>
+                                    <td className="px-2 py-1 text-right font-bold"></td>
+                                    <td className="px-2 py-1 text-right font-bold text-indigo-700">
+                                      {(
+                                        parseAmount(row[13]) -
+                                        matchingRaods.reduce((sum, raodRow) => sum + parseAmount(raodRow[14]), 0)
+                                      ).toLocaleString("en-US", {
+                                        minimumFractionDigits: 0,
                                         maximumFractionDigits: 2,
                                       })}
-                                  </td>
-                                  <td className="px-4 py-2 text-right font-bold">
-                                    {(
-                                      parseAmount(row[13]) -
-                                      matchingRaods.reduce(
-                                        (sum, raodRow) =>
-                                          sum + parseAmount(raodRow[14]),
-                                        0
-                                      )
-                                    ).toLocaleString("en-US", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </td>
-                                </tr>
-                              </tfoot>
-                            </table>
+                                    </td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -608,38 +476,34 @@ function Records() {
                 );
               })}
             </tbody>
-            <tfoot className="bg-[#e3ffe5] sticky bottom-0 border border-border">
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-6 py-3 text-sm font-bold text-gray-700"
-                >
-                  TOTAL
-                </td>
-                <td className="px-6 py-3 text-sm font-bold text-gray-700">
-                  {totals.amount.toLocaleString("en-US", {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
-                </td>
-                <td className="px-6 py-3 text-sm font-bold text-gray-700">
-                  {totals.obligation.toLocaleString("en-US", {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
-                </td>
-                <td className="px-6 py-3 text-sm font-bold text-gray-700">
-                  {totals.unobligated.toLocaleString("en-US", {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3,
-                  })}
-                </td>
-
-                <td colSpan={3}></td>
-              </tr>
-            </tfoot>
-          </table>
-        )}
+                <tfoot className="bg-gradient-to-r from-blue-50 to-blue-100 sticky bottom-0 border-t-2 border-blue-300">
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-sm font-bold text-gray-900">TOTAL</td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                      {totals.amount.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-green-700">
+                      {totals.obligation.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-red-700">
+                      {totals.unobligated.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
