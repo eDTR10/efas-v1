@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Google Sheets API Configuration
-const GOOGLE_SHEETS_API_KEY = "AIzaSyD1Kh-Fy2le4-MaL4Ryo_yvfKs5ka5UIHs";
+const GOOGLE_SHEETS_API_KEY = `${import.meta.env.VITE_API_KEY}`;
 
 // Default spreadsheets
 const DEFAULT_SPREADSHEETS = {
