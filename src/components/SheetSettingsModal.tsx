@@ -21,16 +21,22 @@ const DEFAULT_SETTINGS: SheetSettings = {
 };
 
 export const getSheetSettings = (): SheetSettings => {
-  try {
-    const stored = localStorage.getItem("sheetSettings");
-    return stored ? JSON.parse(stored) : DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    mdsRegR10Id: params.get("mdsRegR10Id") || DEFAULT_SETTINGS.mdsRegR10Id,
+    mdsRegR10Sheet: params.get("mdsRegR10Sheet") || DEFAULT_SETTINGS.mdsRegR10Sheet,
+    raod2024Id: params.get("raod2024Id") || DEFAULT_SETTINGS.raod2024Id,
+    raod2024Sheet: params.get("raod2024Sheet") || DEFAULT_SETTINGS.raod2024Sheet,
+  };
 };
 
 export const saveSheetSettings = (settings: SheetSettings) => {
-  localStorage.setItem("sheetSettings", JSON.stringify(settings));
+  const params = new URLSearchParams(window.location.search);
+  params.set("mdsRegR10Id", settings.mdsRegR10Id);
+  params.set("mdsRegR10Sheet", settings.mdsRegR10Sheet);
+  params.set("raod2024Id", settings.raod2024Id);
+  params.set("raod2024Sheet", settings.raod2024Sheet);
+  window.history.replaceState(null, "", `?${params.toString()}`);
 };
 
 const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
@@ -162,7 +168,7 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
         {/* Success Message */}
         {saved && (
           <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md">
-            Settings saved successfully! Refresh the page to load new data.
+            Settings saved! Copy the URL to share these settings with others.
           </div>
         )}
 
