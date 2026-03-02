@@ -25,6 +25,13 @@ const Records2 = lazy(() =>
   wait(1300).then(() => import("./screens/admin/records/Records2.tsx"))
 );
 
+const MainPortalContainer = lazy(() =>
+  wait(1300).then(() => import("./screens/portal_selection/MainPortalContainer.tsx"))
+);
+
+const NTCABalanceMainContainer = lazy(() =>
+  wait(1300).then(() => import("./screens/ntca_balance/NTCABalanceMainContainer.tsx"))
+);
 
 // const Login = lazy(() =>
 //   wait(1300).then(() => import("./screens/auth/Login.tsx"))
@@ -44,13 +51,29 @@ const router = createBrowserRouter([
   {
 
     path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/records" />,
+    element: <Navigate to="/efas-v1/portal" />,
+  },
+  {
+    path: "/efas-v1/portal",
+    element: <>
+      <Suspense fallback={<Loader />}>
+        <MainPortalContainer />
+      </Suspense>
+    </>,
+  },
+  {
+    path: "/efas-v1/ntca-balance",
+    element: <>
+      <Suspense fallback={<Loader />}>
+        <NTCABalanceMainContainer />
+      </Suspense>
+    </>,
   },
   {
     path: "/efas-v1/records",
     element: <>
       <Suspense fallback={<Loader />}>
-        <Records2/>
+        <Records2 />
       </Suspense>
     </>,
   },
@@ -123,6 +146,6 @@ function wait(time: number) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 
-    <RouterProvider router={router} />
+  <RouterProvider router={router} />
 
 )

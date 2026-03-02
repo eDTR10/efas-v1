@@ -2,8 +2,9 @@ import { readSheetData } from "./../../../plugin/googleSheets";
 import SheetSettingsModal, { getSheetSettings } from "./../../../components/SheetSettingsModal";
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
-import { useSearchParams }  from "react-router-dom"; // Add this import
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Settings } from "lucide-react";
+import logo from '../../../assets/eFAS_Logo.png';
 
 
 // Move parseAmount function before component definition
@@ -20,6 +21,7 @@ const parseAmount = (value: string) => {
 };
 
 function Records() {
+  const navigate = useNavigate();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [_sheetSettings, setSheetSettings] = useState(getSheetSettings());
@@ -36,7 +38,7 @@ function Records() {
       "PAP",
       "DESCRIPTION",
       "CLASS TYPE",
-      "FUND TYPE", 
+      "FUND TYPE",
       "Object Code no.",
       "Object Code Desc",
       "AMOUNT",
@@ -52,7 +54,7 @@ function Records() {
   const [raod, setRaod] = useState([
     [
       "PAP",
-      "PAP CODE", 
+      "PAP CODE",
       "DATE OF SARO",
       "SARO NO",
       "ALLOTMENT AMOUNT",
@@ -85,7 +87,7 @@ function Records() {
   useEffect(() => {
     const programParam = searchParams.get('program');
     const allotmentParam = searchParams.get('allotment');
-    
+
     if (programParam) setSelectedProgram(programParam);
     if (allotmentParam) setSelectedAllotment(allotmentParam);
   }, [searchParams]);
@@ -94,7 +96,7 @@ function Records() {
   const handleProgramChange = (selectedOption: any) => {
     const newValue = selectedOption ? selectedOption.value : "";
     setSelectedProgram(newValue);
-    
+
     // Update URL parameters
     if (newValue) {
       searchParams.set('program', newValue);
@@ -107,7 +109,7 @@ function Records() {
   const handleAllotmentChange = (selectedOption: any) => {
     const newValue = selectedOption ? selectedOption.value : "";
     setSelectedAllotment(newValue);
-    
+
     // Update URL parameters
     if (newValue) {
       searchParams.set('allotment', newValue);
@@ -163,17 +165,17 @@ function Records() {
   // Update the filtering logic
   const filteredData = data.filter((row, index) => {
     if (index === 0) return true; // Always include header row
-    
+
     if (!selectedProgram && !selectedAllotment) return true; // Show all if nothing selected
-    
+
     if (selectedProgram && selectedAllotment) {
       return row[8] === selectedProgram && row[3] === selectedAllotment;
     }
-    
+
     if (selectedProgram) {
       return row[8] === selectedProgram; // Include all rows matching program
     }
-    
+
     if (selectedAllotment) {
       return row[3] === selectedAllotment;
     }
@@ -199,9 +201,9 @@ function Records() {
             raodRow[6] === row[11]
         );
 
-        console.log("Calculating totals for row:", row);
+      console.log("Calculating totals for row:", row);
 
-        console.log("Matching RAODs for totals calculation:", matchingRaods);
+      console.log("Matching RAODs for totals calculation:", matchingRaods);
       const totalObligation = matchingRaods.reduce((sum, raodRow: any) => {
         const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
         return sum + value;
@@ -218,9 +220,13 @@ function Records() {
   );
 
   return (
-    <div className="h-full w-full bg-gray-50">
-      <SheetSettingsModal 
-        isOpen={settingsOpen} 
+    <div className="min-h-screen w-full bg-neutral-950 relative overflow-hidden">
+      {/* Decorative orbs */}
+      <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-green-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse" />
+
+      <SheetSettingsModal
+        isOpen={settingsOpen}
         onClose={() => {
           setSettingsOpen(false);
           setSheetSettings(getSheetSettings());
@@ -229,18 +235,30 @@ function Records() {
         }}
       />
 
-      {/* Header Section */}
-      {/* <div className="bg-white border-b border-gray-200 px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Financial Records Management</h1>
-        <p className="text-gray-600">Monitor and analyze budget allocations, obligations, and unobligated amounts</p>
-      </div> */}
+      {/* Nav Bar */}
+      <nav className="relative z-30 w-full flex items-center justify-between px-6 py-4 bg-black border-b border-green-500/20 shadow-sm">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-white hover:text-green-400 font-medium text-base px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-green-500/40 transition-all duration-200"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+        <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none select-none">
+          <p className="text-green-400/70 text-[10px] tracking-widest uppercase">eFAS System</p>
+          <h1 className="text-white font-bold text-sm tracking-tight">RAOD — Financial Records</h1>
+        </div>
+        <img src={logo} alt="Logo" className="h-10 w-auto object-contain bg-transparent ml-4" />
+      </nav>
 
-      <div className="p-8">
+      <div className="relative z-10 p-8">
         {/* Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8 border border-gray-200">
+        <div className="rounded-2xl bg-neutral-900 p-6 mb-8 border border-green-500/20 shadow-sm">
           <div className="flex items-end gap-6">
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Program</label>
+              <label className="block text-sm font-semibold text-green-400 mb-2">Select Program</label>
               <Select
                 id="program"
                 name="program"
@@ -250,10 +268,64 @@ function Records() {
                 isClearable
                 placeholder="Choose program..."
                 className="mt-1"
+                menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
+                styles={{
+                  control: (base, state) => ({
+                    ...base,
+                    backgroundColor: '#0a0a0a',
+                    borderColor: state.isFocused ? '#22c55e' : '#262626',
+                    boxShadow: state.isFocused ? '0 0 0 2px #22c55e44' : 'none',
+                    color: '#ffffff',
+                    minHeight: '44px',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: '#0a0a0a',
+                    color: '#ffffff',
+                    border: '1px solid #22c55e33',
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isSelected
+                      ? '#16a34a'
+                      : state.isFocused
+                        ? '#171717'
+                        : 'transparent',
+                    color: state.isSelected ? '#ffffff' : '#e5e5e5',
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    color: '#ffffff',
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    color: '#ffffff',
+                  }),
+                  placeholder: (base) => ({
+                    ...base,
+                    color: '#4ade80',
+                  }),
+                  indicatorSeparator: (base) => ({
+                    ...base,
+                    backgroundColor: '#262626',
+                  }),
+                  dropdownIndicator: (base, state) => ({
+                    ...base,
+                    color: state.isFocused ? '#22c55e' : '#737373',
+                  }),
+                  clearIndicator: (base) => ({
+                    ...base,
+                    color: '#737373',
+                  }),
+                }}
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Allotment</label>
+              <label className="block text-sm font-semibold text-green-400 mb-2">Select Allotment</label>
               <Select
                 id="allotment"
                 name="allotment"
@@ -263,11 +335,65 @@ function Records() {
                 isClearable
                 placeholder="Choose allotment..."
                 className="mt-1"
+                menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
+                styles={{
+                  control: (base, state) => ({
+                    ...base,
+                    backgroundColor: '#0a0a0a',
+                    borderColor: state.isFocused ? '#22c55e' : '#262626',
+                    boxShadow: state.isFocused ? '0 0 0 2px #22c55e44' : 'none',
+                    color: '#ffffff',
+                    minHeight: '44px',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: '#0a0a0a',
+                    color: '#ffffff',
+                    border: '1px solid #22c55e33',
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isSelected
+                      ? '#16a34a'
+                      : state.isFocused
+                        ? '#171717'
+                        : 'transparent',
+                    color: state.isSelected ? '#ffffff' : '#e5e5e5',
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    color: '#ffffff',
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    color: '#ffffff',
+                  }),
+                  placeholder: (base) => ({
+                    ...base,
+                    color: '#4ade80',
+                  }),
+                  indicatorSeparator: (base) => ({
+                    ...base,
+                    backgroundColor: '#262626',
+                  }),
+                  dropdownIndicator: (base, state) => ({
+                    ...base,
+                    color: state.isFocused ? '#22c55e' : '#737373',
+                  }),
+                  clearIndicator: (base) => ({
+                    ...base,
+                    color: '#737373',
+                  }),
+                }}
               />
             </div>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2 font-medium"
+              className="flex items-center gap-2 text-green-400 hover:text-white px-3 py-2 rounded-xl hover:bg-neutral-800 border border-neutral-700 hover:border-green-500/40 transition-all duration-200 text-sm font-medium"
             >
               <Settings size={18} />
               Settings
@@ -279,219 +405,217 @@ function Records() {
 
 
         {/* Records Table Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-   
-
+        <div className="rounded-2xl overflow-hidden border border-green-500/20 bg-neutral-900">
           <div className="overflow-auto max-h-[70vh]">
             {filteredData.length <= 1 ? (
               <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500 text-lg">No records found. Select Program and Allotment to view data.</p>
+                <p className="text-neutral-500 text-lg">No records found. Select Program and Allotment to view data.</p>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-100 sticky top-0">
+              <table className="min-w-full divide-y divide-neutral-800">
+                <thead className="bg-black sticky top-0">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">ALLOTMENT NO.</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">PROGRAM</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">DESCRIPTION</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">OBJ. CODE</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">AMOUNT</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">TOTAL OBLIGATION</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">TOTAL UNOBLIGATED</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">NTCA NUMBER</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">DATE RECEIVED</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">ALLOTMENT NO.</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">PROGRAM</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">DESCRIPTION</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">OBJ. CODE</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">AMOUNT</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">TOTAL OBLIGATION</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">TOTAL UNOBLIGATED</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">NTCA NUMBER</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">DATE RECEIVED</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-              
-            {/* {console.log(filteredData[1])} */}
-              {selectedProgram && selectedAllotment && filteredData[1] && (
-                <tr className="bg-blue-50 hover:bg-blue-100">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{filteredData[1][3]}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][1]}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][8]}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][14]}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][7]}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{filteredData[1][6]}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-700"></td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-700"></td>
-                  <td className="px-6 py-4 text-sm text-gray-600"></td>
-                  <td className="px-6 py-4 text-sm text-gray-600"></td>
-                </tr>
-              )}
-              {filteredData.slice(1).map((row: any, rowIndex) => {
-                const matchingRaods: any[] = raod
-                  .slice(1)
-                  .filter(
-                    (raodRow) => {
-                      const match = raodRow[3] === row[3] && raodRow[6] === row[11];
-                      return match;
-                    }
-                  );
+                <tbody className="divide-y divide-neutral-800">
 
-                const totalObligation = matchingRaods.reduce((sum, raodRow) => {
-                  const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
-                  return sum + value;
-                }, 0);
-
-                const cleanNumber = (value: string) => {
-                  const num = Number(value.replace(/,/g, "").trim());
-                  return isNaN(num) ? 0 : num;
-                };
-                const amount = row[13] ? cleanNumber(row[13]) : 0;
-                const unobligated = amount - totalObligation;
-
-                return (
-                  <React.Fragment key={rowIndex}>
-                    <tr
-                      className="hover:bg-gray-50 transition cursor-pointer border-b border-gray-200"
-                      onClick={() => {
-                        const rowId = `${row[3]}-${row[8]}-${row[11]}`;
-                        setSelectedRow(selectedRow === rowId ? null : rowId);
-                      }}
-                    >
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {selectedProgram && selectedAllotment ? "" : row[3]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {selectedProgram && selectedAllotment ? "" : row[1]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {selectedProgram && selectedAllotment ? "" : row[8]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {row[12]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {row[11]}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {row[13]}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-green-600 hover:underline">
-                        {totalObligation
-                          ? totalObligation.toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-red-600 hover:underline">
-                        {unobligated
-                          ? unobligated.toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {row[18]}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {row[17]}
-                      </td>
+                  {/* {console.log(filteredData[1])} */}
+                  {selectedProgram && selectedAllotment && filteredData[1] && (
+                    <tr className="bg-green-900/20 hover:bg-green-900/30 border-b border-neutral-800">
+                      <td className="px-6 py-4 text-sm font-medium text-white">{filteredData[1][3]}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][1]}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][8]}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][14]}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][7]}</td>
+                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][6]}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-neutral-300"></td>
+                      <td className="px-6 py-4 text-sm font-medium text-neutral-300"></td>
+                      <td className="px-6 py-4 text-sm text-neutral-300"></td>
+                      <td className="px-6 py-4 text-sm text-neutral-300"></td>
                     </tr>
-                    {selectedRow === `${row[3]}-${row[8]}-${row[11]}` && matchingRaods.length > 0 && (
-                      <tr>
-                        <td colSpan={10} className="px-6 py-3">
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-300 shadow-sm">
-                            <h4 className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wide">📋 Obligations Breakdown</h4>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full text-xs">
-                                <thead>
-                                  <tr className="bg-blue-200">
-                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Name</th>
-                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Date</th>
-                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">OBRs</th>
-                                    <th className="px-2 py-1.5 text-right font-semibold text-blue-900">Credit</th>
-                                    <th className="px-2 py-1.5 text-right font-semibold text-blue-900">Balance</th>
-                                    <th className="px-2 py-1.5 text-left font-semibold text-blue-900">Particulars</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-blue-200">
-                                  {/* Initial Amount Row */}
-                                  <tr className="bg-blue-100">
-                                    <td colSpan={3} className="px-2 py-1 font-semibold text-blue-900">Initial Amount</td>
-                                    <td className="px-2 py-1 text-right font-semibold text-blue-900"></td>
-                                    <td className="px-2 py-1 text-right font-semibold text-blue-900">{row[13]}</td>
-                                    <td></td>
-                                  </tr>
-                                  {/* Credit Entries */}
-                                  {matchingRaods.map((raodRow, index) => {
-                                    const initialAmount = parseAmount(row[13]);
-                                    const credit = parseAmount(raodRow[14]);
-                                    const previousCredits = matchingRaods
-                                      .slice(0, index)
-                                      .reduce((sum, r) => sum + parseAmount(r[14]), 0);
-                                    const balance = initialAmount - previousCredits - credit;
+                  )}
+                  {filteredData.slice(1).map((row: any, rowIndex) => {
+                    const matchingRaods: any[] = raod
+                      .slice(1)
+                      .filter(
+                        (raodRow) => {
+                          const match = raodRow[3] === row[3] && raodRow[6] === row[11];
+                          return match;
+                        }
+                      );
 
-                                    return (
-                                      <tr key={index} className="hover:bg-blue-50 transition text-gray-700">
-                                        <td className="px-2 py-1 text-xs truncate">{raodRow[12]}</td>
-                                        <td className="px-2 py-1 text-xs">{raodRow[7]}</td>
-                                        <td className="px-2 py-1 text-xs truncate">{`${raodRow[9]}-${raodRow[10]}`}</td>
-                                        <td className="px-2 py-1 text-right font-medium text-green-600">
-                                          {credit.toLocaleString("en-US", {
-                                            minimumFractionDigits: 0,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="px-2 py-1 text-right font-medium text-indigo-600">
-                                          {balance.toLocaleString("en-US", {
-                                            minimumFractionDigits: 0,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="px-2 py-1 text-xs truncate hover:truncate-none hover:whitespace-normal hover:break-words max-w-xs hover:max-w-none hover:bg-white hover:p-2 hover:rounded hover:border hover:border-gray-300 hover:z-20 relative">
-                                          {raodRow[13]}
-                                        </td>
+                    const totalObligation = matchingRaods.reduce((sum, raodRow) => {
+                      const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
+                      return sum + value;
+                    }, 0);
+
+                    const cleanNumber = (value: string) => {
+                      const num = Number(value.replace(/,/g, "").trim());
+                      return isNaN(num) ? 0 : num;
+                    };
+                    const amount = row[13] ? cleanNumber(row[13]) : 0;
+                    const unobligated = amount - totalObligation;
+
+                    return (
+                      <React.Fragment key={rowIndex}>
+                        <tr
+                          className="hover:bg-neutral-800/60 transition cursor-pointer border-b border-neutral-800"
+                          onClick={() => {
+                            const rowId = `${row[3]}-${row[8]}-${row[11]}`;
+                            setSelectedRow(selectedRow === rowId ? null : rowId);
+                          }}
+                        >
+                          <td className="px-6 py-4 text-sm font-medium text-white">
+                            {selectedProgram && selectedAllotment ? "" : row[3]}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {selectedProgram && selectedAllotment ? "" : row[1]}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {selectedProgram && selectedAllotment ? "" : row[8]}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {row[12]}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {row[11]}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-white">
+                            {row[13]}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-green-400 hover:underline">
+                            {totalObligation
+                              ? totalObligation.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })
+                              : "—"}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-red-400 hover:underline">
+                            {unobligated
+                              ? unobligated.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })
+                              : "—"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {row[18]}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {row[17]}
+                          </td>
+                        </tr>
+                        {selectedRow === `${row[3]}-${row[8]}-${row[11]}` && matchingRaods.length > 0 && (
+                          <tr>
+                            <td colSpan={10} className="px-6 py-3">
+                              <div className="bg-neutral-900 p-4 rounded-xl border border-green-500/20 shadow-sm">
+                                <h4 className="text-xs font-bold text-green-400 mb-3 uppercase tracking-wide">📋 Obligations Breakdown</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full text-xs">
+                                    <thead>
+                                      <tr className="bg-black">
+                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Name</th>
+                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Date</th>
+                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">OBRs</th>
+                                        <th className="px-2 py-1.5 text-right font-semibold text-green-400">Credit</th>
+                                        <th className="px-2 py-1.5 text-right font-semibold text-green-400">Balance</th>
+                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Particulars</th>
                                       </tr>
-                                    );
-                                  })}
-                                </tbody>
-                                <tfoot className="bg-blue-200">
-                                  <tr>
-                                    <td colSpan={3} className="px-2 py-1 font-bold text-blue-900">TOTAL</td>
-                                    <td className="px-2 py-1 text-right font-bold"></td>
-                                    <td className="px-2 py-1 text-right font-bold text-indigo-700">
-                                      {(
-                                        parseAmount(row[13]) -
-                                        matchingRaods.reduce((sum, raodRow) => sum + parseAmount(raodRow[14]), 0)
-                                      ).toLocaleString("en-US", {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 2,
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-800">
+                                      {/* Initial Amount Row */}
+                                      <tr className="bg-neutral-800">
+                                        <td colSpan={3} className="px-2 py-1 font-semibold text-white">Initial Amount</td>
+                                        <td className="px-2 py-1 text-right font-semibold text-white"></td>
+                                        <td className="px-2 py-1 text-right font-semibold text-white">{row[13]}</td>
+                                        <td></td>
+                                      </tr>
+                                      {/* Credit Entries */}
+                                      {matchingRaods.map((raodRow, index) => {
+                                        const initialAmount = parseAmount(row[13]);
+                                        const credit = parseAmount(raodRow[14]);
+                                        const previousCredits = matchingRaods
+                                          .slice(0, index)
+                                          .reduce((sum, r) => sum + parseAmount(r[14]), 0);
+                                        const balance = initialAmount - previousCredits - credit;
+
+                                        return (
+                                          <tr key={index} className="hover:bg-neutral-800/60 transition text-neutral-300">
+                                            <td className="px-2 py-1 text-xs truncate">{raodRow[12]}</td>
+                                            <td className="px-2 py-1 text-xs">{raodRow[7]}</td>
+                                            <td className="px-2 py-1 text-xs truncate">{`${raodRow[9]}-${raodRow[10]}`}</td>
+                                            <td className="px-2 py-1 text-right font-medium text-green-400">
+                                              {credit.toLocaleString("en-US", {
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 2,
+                                              })}
+                                            </td>
+                                            <td className="px-2 py-1 text-right font-medium text-emerald-300">
+                                              {balance.toLocaleString("en-US", {
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 2,
+                                              })}
+                                            </td>
+                                            <td className="px-2 py-1 text-xs truncate hover:truncate-none hover:whitespace-normal hover:break-words max-w-xs hover:max-w-none hover:bg-neutral-800 hover:p-2 hover:rounded hover:border hover:border-green-500/30 hover:z-20 relative">
+                                              {raodRow[13]}
+                                            </td>
+                                          </tr>
+                                        );
                                       })}
-                                    </td>
-                                    <td></td>
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-                <tfoot className="bg-gradient-to-r from-blue-50 to-blue-100 sticky bottom-0 border-t-2 border-blue-300">
+                                    </tbody>
+                                    <tfoot className="bg-black">
+                                      <tr>
+                                        <td colSpan={3} className="px-2 py-1 font-bold text-green-400">TOTAL</td>
+                                        <td className="px-2 py-1 text-right font-bold"></td>
+                                        <td className="px-2 py-1 text-right font-bold text-emerald-300">
+                                          {(
+                                            parseAmount(row[13]) -
+                                            matchingRaods.reduce((sum, raodRow) => sum + parseAmount(raodRow[14]), 0)
+                                          ).toLocaleString("en-US", {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 2,
+                                          })}
+                                        </td>
+                                        <td></td>
+                                      </tr>
+                                    </tfoot>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-black sticky bottom-0 border-t-2 border-green-500/20">
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-sm font-bold text-gray-900">TOTAL</td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                    <td colSpan={5} className="px-6 py-4 text-sm font-bold text-green-400">TOTAL</td>
+                    <td className="px-6 py-4 text-sm font-bold text-white">
                       {totals.amount.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-green-700">
+                    <td className="px-6 py-4 text-sm font-bold text-green-400">
                       {totals.obligation.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-red-700">
+                    <td className="px-6 py-4 text-sm font-bold text-red-400">
                       {totals.unobligated.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
