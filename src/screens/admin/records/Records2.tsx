@@ -3,7 +3,6 @@ import SheetSettingsModal, { getSheetSettings } from "./../../../components/Shee
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Settings } from "lucide-react";
 import logo from '../../../assets/eFAS_Logo.png';
 
 
@@ -274,11 +273,14 @@ function Records() {
     { amount: 0, obligation: 0, unobligated: 0 }
   );
 
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const recordCount = filteredData.length - 1;
+
   return (
     <div className="min-h-screen w-full bg-neutral-950 relative overflow-hidden">
       {/* Decorative orbs */}
-      <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-green-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-green-500/5 blur-3xl pointer-events-none xs:hidden" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse xs:hidden" />
 
       <SheetSettingsModal
         isOpen={settingsOpen}
@@ -291,29 +293,37 @@ function Records() {
       />
 
       {/* Nav Bar */}
-      <nav className="relative z-30 w-full flex items-center justify-between px-6 py-4 bg-black border-b border-green-500/20 shadow-sm">
+      <nav className="relative z-30 w-full flex items-center justify-between px-6 md:px-4 py-3 bg-black/90 backdrop-blur border-b border-green-500/20 shadow-[0_1px_12px_rgba(0,0,0,0.5)]">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-white hover:text-green-400 font-medium text-base px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-green-500/40 transition-all duration-200"
+          className="flex items-center gap-2 text-white hover:text-green-400 font-medium text-sm px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-green-500/40 transition-all duration-200 shrink-0"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back
+          <span className="xs:hidden">Back</span>
         </button>
         <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none select-none">
-          <p className="text-green-400/70 text-[10px] tracking-widest uppercase">eFAS System</p>
-          <h1 className="text-white font-bold text-sm tracking-tight">RAOD — Financial Records</h1>
+          <p className="text-green-400/60 text-[9px] tracking-widest uppercase">eFAS System</p>
+          <h1 className="text-white font-bold text-sm md:text-xs tracking-tight">RAOD — Financial Records</h1>
         </div>
-        <img src={logo} alt="Logo" className="h-10 w-auto object-contain bg-transparent ml-4" />
+        <div className="flex items-center gap-2 shrink-0">
+          <img src={logo} alt="Logo" className="h-9 md:h-7 w-auto object-contain bg-transparent" />
+        </div>
       </nav>
 
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-6 md:p-4 sm:p-3 xs:p-2">
+
         {/* Filter Section */}
-        <div className="rounded-2xl bg-neutral-900 p-6 mb-8 border border-green-500/20 shadow-sm">
-          <div className="flex items-end gap-6">
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-green-400 mb-2">Select Program</label>
+        <div className="rounded-2xl bg-neutral-900/80 backdrop-blur p-5 md:p-4 mb-5 border border-neutral-800 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+
+         
+          
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-1 gap-4 md:gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Program</label>
               <Select
                 id="program"
                 name="program"
@@ -322,13 +332,12 @@ function Records() {
                 onChange={handleProgramChange}
                 isClearable
                 placeholder="Choose program..."
-                className="mt-1"
                 styles={selectStyles}
                 menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-green-400 mb-2">Select Allotment</label>
+            <div>
+              <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Allotment</label>
               <Select
                 id="allotment"
                 name="allotment"
@@ -337,77 +346,144 @@ function Records() {
                 onChange={handleAllotmentChange}
                 isClearable
                 placeholder="Choose allotment..."
-                className="mt-1"
                 styles={selectStyles}
                 menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
               />
             </div>
-            <button
+              {/* <button
               onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-2 text-green-400 hover:text-white px-3 py-2 rounded-xl hover:bg-neutral-800 border border-neutral-700 hover:border-green-500/40 transition-all duration-200 text-sm font-medium"
+              className="ml-auto flex items-center gap-1.5 text-green-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 border border-neutral-700 hover:border-green-500/40 transition-all duration-200 text-xs font-medium"
             >
-              <Settings size={18} />
+              <Settings size={13} />
               Settings
-            </button>
+            </button> */}
+
+            
           </div>
         </div>
 
         {/* Stats Cards */}
-
+        {filteredData.length > 1 && (() => {
+          const obligatedPct = totals.amount > 0 ? Math.min(100, (totals.obligation / totals.amount) * 100) : 0;
+          const unobligatedPct = 100 - obligatedPct;
+          const barColor = obligatedPct >= 100 ? "bg-red-500" : obligatedPct >= 75 ? "bg-amber-400" : "bg-green-500";
+          const pctColor = obligatedPct >= 100 ? "text-red-400" : obligatedPct >= 75 ? "text-amber-400" : "text-green-400";
+          console.log(unobligatedPct);
+          return (
+          <div className="mb-5">
+            <div className="grid grid-cols-3 sm:grid-cols-1 gap-4 md:gap-3 mb-3">
+              {/* Total Amount */}
+              <div className="rounded-2xl bg-yellow-950/30 border border-yellow-700/30 p-4 md:p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-yellow-900/40 border border-yellow-600/40 flex items-center justify-center shrink-0">
+                  <svg className="w-4.5 h-4.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-yellow-500/70 uppercase tracking-wider font-semibold">Total Amount</p>
+                  <p className="text-yellow-400 font-bold text-base md:text-sm truncate">{fmt(totals.amount)}</p>
+                </div>
+              </div>
+              {/* Obligated */}
+              <div className="rounded-2xl bg-green-950/40 border border-green-800/40 p-4 md:p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-green-900/50 border border-green-700/50 flex items-center justify-center shrink-0">
+                  <svg className="w-4.5 h-4.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-green-500/70 uppercase tracking-wider font-semibold">Obligated</p>
+                  <p className="text-green-400 font-bold text-base md:text-sm truncate">{fmt(totals.obligation)}</p>
+                </div>
+              </div>
+              {/* Unobligated */}
+              <div className="rounded-2xl bg-red-950/30 border border-red-800/30 p-4 md:p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-900/40 border border-red-700/40 flex items-center justify-center shrink-0">
+                  <svg className="w-4.5 h-4.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-red-400/60 uppercase tracking-wider font-semibold">Unobligated</p>
+                  <p className="text-red-400 font-bold text-base md:text-sm truncate">{fmt(totals.unobligated)}</p>
+                </div>
+              </div>
+            </div>
+            {/* Utilization bar spanning all cards */}
+            <div className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-4 py-3 flex items-center gap-3">
+              <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-widest shrink-0">Utilization</span>
+              <div className="flex-1 h-2 rounded-full bg-neutral-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                  style={{ width: `${obligatedPct}%` }}
+                />
+              </div>
+              <span className={`text-[11px] font-bold shrink-0 ${pctColor}`}>{obligatedPct.toFixed(1)}%</span>
+            </div>
+          </div>
+          );
+        })()}
 
         {/* Records Table Section */}
-        <div className="rounded-2xl overflow-hidden border border-green-500/20 bg-neutral-900">
-          <div className="overflow-auto max-h-[70vh]">
+        <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900/80 shadow-sm">
+          {/* Table header row */}
+          <div className="px-5 md:px-4 py-3 bg-black/60 border-b border-neutral-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-5 rounded-full bg-green-500" />
+              <h2 className="text-white font-semibold text-sm">Records</h2>
+            </div>
+            {filteredData.length > 1 && (
+              <span className="text-[10px] text-neutral-500 font-medium">
+                {recordCount} row{recordCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          <div className="overflow-auto max-h-[55vh]">
             {filteredData.length <= 1 ? (
-              <div className="flex items-center justify-center h-64">
-                <p className="text-neutral-500 text-lg">No records found. Select Program and Allotment to view data.</p>
+              <div className="flex flex-col items-center justify-center h-56 gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-neutral-400 text-sm font-medium">No records found</p>
+                  <p className="text-neutral-600 text-xs mt-1">Select a Program or Allotment to view data</p>
+                </div>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-neutral-800">
-                <thead className="bg-black sticky top-0">
+              <table className="min-w-full divide-y divide-neutral-800/60 text-sm">
+                <thead className="bg-black/80 backdrop-blur-sm sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">ALLOTMENT NO.</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">PROGRAM</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">DESCRIPTION</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">OBJ. CODE</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">AMOUNT</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">TOTAL OBLIGATION</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">TOTAL UNOBLIGATED</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">NTCA NUMBER</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-green-400 uppercase tracking-wider">DATE RECEIVED</th>
+                    {["Allotment No.", "Date", "Program", "Description", "Obj. Code", "Amount", "Obligated", "Unobligated", "NTCA No.", "Date Recd"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-green-400/80 uppercase tracking-widest whitespace-nowrap border-b border-neutral-800">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-800">
-
-                  {/* {console.log(filteredData[1])} */}
+                <tbody className="divide-y divide-neutral-800/40">
                   {selectedProgram && selectedAllotment && filteredData[1] && (
-                    <tr className="bg-green-900/20 hover:bg-green-900/30 border-b border-neutral-800">
-                      <td className="px-6 py-4 text-sm font-medium text-white">{filteredData[1][3]}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][1]}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][8]}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][14]}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][7]}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">{filteredData[1][6]}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-neutral-300"></td>
-                      <td className="px-6 py-4 text-sm font-medium text-neutral-300"></td>
-                      <td className="px-6 py-4 text-sm text-neutral-300"></td>
-                      <td className="px-6 py-4 text-sm text-neutral-300"></td>
+                    <tr className="bg-green-900/15 border-l-2 border-l-green-500/50">
+                      <td className="px-4 py-3 text-xs font-semibold text-green-300 whitespace-nowrap">{filteredData[1][3]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">{filteredData[1][1]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-300 max-w-[160px] truncate">{filteredData[1][8]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-300 max-w-[180px] truncate">{filteredData[1][14]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">{filteredData[1][7]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-300 whitespace-nowrap">{filteredData[1][6]}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500">—</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500">—</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500">—</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500">—</td>
                     </tr>
                   )}
                   {filteredData.slice(1).map((row: any, rowIndex) => {
                     const matchingRaods: any[] = raod
                       .slice(1)
-                      .filter(
-                        (raodRow) => {
-                          const match = raodRow[3] === row[3] && raodRow[6] === row[11];
-                          return match;
-                        }
-                      );
+                      .filter((raodRow) => raodRow[3] === row[3] && raodRow[6] === row[11]);
 
                     const totalObligation = matchingRaods.reduce((sum, raodRow) => {
-                      const value = raodRow[14] ? parseAmount(raodRow[14]) : 0;
-                      return sum + value;
+                      return sum + (raodRow[14] ? parseAmount(raodRow[14]) : 0);
                     }, 0);
 
                     const cleanNumber = (value: string) => {
@@ -416,129 +492,174 @@ function Records() {
                     };
                     const amount = row[13] ? cleanNumber(row[13]) : 0;
                     const unobligated = amount - totalObligation;
+                    const rowId = `${row[3]}-${row[8]}-${row[11]}`;
+                    const isExpanded = selectedRow === rowId;
 
                     return (
                       <React.Fragment key={rowIndex}>
                         <tr
-                          className="hover:bg-neutral-800/60 transition cursor-pointer border-b border-neutral-800"
-                          onClick={() => {
-                            const rowId = `${row[3]}-${row[8]}-${row[11]}`;
-                            setSelectedRow(selectedRow === rowId ? null : rowId);
-                          }}
+                          className={`transition-colors cursor-pointer ${isExpanded ? "bg-green-950/30 border-l-2 border-l-green-500" : "hover:bg-neutral-800/40 border-l-2 border-l-transparent"}`}
+                          onClick={() => setSelectedRow(isExpanded ? null : rowId)}
                         >
-                          <td className="px-6 py-4 text-sm font-medium text-white">
-                            {selectedProgram && selectedAllotment ? "" : row[3]}
+                          <td className="px-4 py-3 text-xs font-medium text-white whitespace-nowrap">
+                            {selectedProgram && selectedAllotment ? (
+                              <span className="text-neutral-500 italic text-[10px]">—</span>
+                            ) : row[3]}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
+                          <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">
                             {selectedProgram && selectedAllotment ? "" : row[1]}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
+                          <td className="px-4 py-3 text-xs text-neutral-300 max-w-[160px] truncate">
                             {selectedProgram && selectedAllotment ? "" : row[8]}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
-                            {row[12]}
+                          <td className="px-4 py-3 text-xs text-neutral-300 max-w-[180px] truncate">{row[12]}</td>
+                          <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">{row[11]}</td>
+                          <td className="px-4 py-3 text-xs font-semibold text-white whitespace-nowrap">{row[13]}</td>
+                          <td className="px-4 py-3 text-xs font-semibold text-green-400 whitespace-nowrap">
+                            {totalObligation ? fmt(totalObligation) : <span className="text-neutral-600">—</span>}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
-                            {row[11]}
+                          <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">
+                            <span className={unobligated < 0 ? "text-red-400" : unobligated === 0 ? "text-neutral-500" : "text-amber-400"}>
+                              {unobligated !== 0 ? fmt(unobligated) : "—"}
+                            </span>
                           </td>
-                          <td className="px-6 py-4 text-sm font-medium text-white">
-                            {row[13]}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-green-400 hover:underline">
-                            {totalObligation
-                              ? totalObligation.toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })
-                              : "—"}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-red-400 hover:underline">
-                            {unobligated
-                              ? unobligated.toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })
-                              : "—"}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
-                            {row[18]}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-neutral-300">
-                            {row[17]}
-                          </td>
+                          <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">{row[18]}</td>
+                          <td className="px-4 py-3 text-xs text-neutral-400 whitespace-nowrap">{row[17]}</td>
                         </tr>
-                        {selectedRow === `${row[3]}-${row[8]}-${row[11]}` && matchingRaods.length > 0 && (
+                        {isExpanded && matchingRaods.length > 0 && (() => {
+                          const initialAmt = parseAmount(row[13]);
+                          const totalObligated = matchingRaods.reduce((sum, r) => sum + parseAmount(r[14]), 0);
+                          const finalBalance = initialAmt - totalObligated;
+                          const utilizationPct = initialAmt > 0 ? Math.min(100, (totalObligated / initialAmt) * 100) : 0;
+                          return (
                           <tr>
-                            <td colSpan={10} className="px-6 py-3">
-                              <div className="bg-neutral-900 p-4 rounded-xl border border-green-500/20 shadow-sm">
-                                <h4 className="text-xs font-bold text-green-400 mb-3 uppercase tracking-wide">📋 Obligations Breakdown</h4>
+                            <td colSpan={10} className="px-4 py-4 bg-neutral-950/70">
+                              <div className="rounded-2xl border border-neutral-800 overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+
+                                {/* Header */}
+                                <div className="px-5 py-3.5 bg-black/70 border-b border-neutral-800 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-6 h-6 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center">
+                                      <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                      </svg>
+                                    </div>
+                                    <span className="text-xs font-bold text-white tracking-tight">Obligations Breakdown</span>
+                                    <span className="text-[10px] bg-green-500/15 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-semibold">{matchingRaods.length} entr{matchingRaods.length !== 1 ? "ies" : "y"}</span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-[11px]">
+                                    <div className="text-right">
+                                      <p className="text-neutral-600 uppercase tracking-wider text-[9px] font-semibold">Total Obligated</p>
+                                      <p className="text-green-400 font-bold">{fmt(totalObligated)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-neutral-600 uppercase tracking-wider text-[9px] font-semibold">Remaining</p>
+                                      <p className={`font-bold ${finalBalance < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(finalBalance)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Utilization bar */}
+                                <div className="px-5 py-2.5 bg-neutral-900/60 border-b border-neutral-800/60 flex items-center gap-3">
+                                  <span className="text-[10px] text-neutral-500 font-medium whitespace-nowrap">Utilization</span>
+                                  <div className="flex-1 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ${utilizationPct >= 100 ? "bg-red-500" : utilizationPct >= 75 ? "bg-amber-500" : "bg-green-500"}`}
+                                      style={{ width: `${utilizationPct}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-[10px] font-bold whitespace-nowrap ${utilizationPct >= 100 ? "text-red-400" : utilizationPct >= 75 ? "text-amber-400" : "text-green-400"}`}>
+                                    {utilizationPct.toFixed(1)}%
+                                  </span>
+                                </div>
+
+                                {/* Table */}
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
                                     <thead>
-                                      <tr className="bg-black">
-                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Name</th>
-                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Date</th>
-                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">OBRs</th>
-                                        <th className="px-2 py-1.5 text-right font-semibold text-green-400">Credit</th>
-                                        <th className="px-2 py-1.5 text-right font-semibold text-green-400">Balance</th>
-                                        <th className="px-2 py-1.5 text-left font-semibold text-green-400">Particulars</th>
+                                      <tr className="bg-neutral-900/50 border-b border-neutral-800/60">
+                                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-widest w-8">#</th>
+                                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Claimant</th>
+                                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Date</th>
+                                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Class / Fund</th>
+                                        <th className="px-4 py-2.5 text-right text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Obligated</th>
+                                        <th className="px-4 py-2.5 text-right text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Remaining Balance</th>
+                                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Particulars</th>
                                       </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-neutral-800">
+                                    <tbody className="divide-y divide-neutral-800/40">
                                       {/* Initial Amount Row */}
-                                      <tr className="bg-neutral-800">
-                                        <td colSpan={3} className="px-2 py-1 font-semibold text-white">Initial Amount</td>
-                                        <td className="px-2 py-1 text-right font-semibold text-white"></td>
-                                        <td className="px-2 py-1 text-right font-semibold text-white">{row[13]}</td>
+                                      <tr className="bg-neutral-800/30">
+                                        <td className="px-4 py-2.5 text-neutral-600 text-[10px]">—</td>
+                                        <td colSpan={3} className="px-4 py-2.5">
+                                          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Initial Allotment</span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-right text-[11px] text-neutral-500">—</td>
+                                        <td className="px-4 py-2.5 text-right">
+                                          <span className="text-[11px] font-bold text-yellow-400">{row[13]}</span>
+                                        </td>
                                         <td></td>
                                       </tr>
-                                      {/* Credit Entries */}
                                       {matchingRaods.map((raodRow, index) => {
-                                        const initialAmount = parseAmount(row[13]);
                                         const credit = parseAmount(raodRow[14]);
                                         const previousCredits = matchingRaods
                                           .slice(0, index)
                                           .reduce((sum, r) => sum + parseAmount(r[14]), 0);
-                                        const balance = initialAmount - previousCredits - credit;
-
+                                        const balance = initialAmt - previousCredits - credit;
+                                        const isLast = index === matchingRaods.length - 1;
                                         return (
-                                          <tr key={index} className="hover:bg-neutral-800/60 transition text-neutral-300">
-                                            <td className="px-2 py-1 text-xs truncate">{raodRow[12]}</td>
-                                            <td className="px-2 py-1 text-xs">{raodRow[7]}</td>
-                                            <td className="px-2 py-1 text-xs truncate">{`${raodRow[9]}-${raodRow[10]}`}</td>
-                                            <td className="px-2 py-1 text-right font-medium text-green-400">
-                                              {credit.toLocaleString("en-US", {
-                                                minimumFractionDigits: 0,
-                                                maximumFractionDigits: 2,
-                                              })}
+                                          <tr key={index} className={`transition-colors group ${isLast ? "bg-neutral-900/40" : "hover:bg-neutral-800/30"}`}>
+                                            <td className="px-4 py-3 text-[10px] font-mono text-neutral-600">{index + 1}</td>
+                                            <td className="px-4 py-3">
+                                              <span className="text-[11px] font-medium text-neutral-200 block max-w-[160px] truncate">
+                                                {raodRow[12]}
+                                              </span>
                                             </td>
-                                            <td className="px-2 py-1 text-right font-medium text-emerald-300">
-                                              {balance.toLocaleString("en-US", {
-                                                minimumFractionDigits: 0,
-                                                maximumFractionDigits: 2,
-                                              })}
+                                            <td className="px-4 py-3 text-[11px] text-neutral-400 whitespace-nowrap">{raodRow[7]}</td>
+                                            <td className="px-4 py-3">
+                                              <span className="inline-flex items-center gap-1 text-[10px] bg-neutral-800 border border-neutral-700 text-neutral-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                {raodRow[9]} / {raodRow[10]}
+                                              </span>
                                             </td>
-                                            <td className="px-2 py-1 text-xs truncate hover:truncate-none hover:whitespace-normal hover:break-words max-w-xs hover:max-w-none hover:bg-neutral-800 hover:p-2 hover:rounded hover:border hover:border-green-500/30 hover:z-20 relative">
-                                              {raodRow[13]}
+                                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                                              <span className="text-[11px] font-semibold text-green-400">
+                                                {credit.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                                              <span className={`text-[11px] font-bold ${balance < 0 ? "text-red-400" : balance === 0 ? "text-neutral-500" : "text-emerald-400"}`}>
+                                                {balance.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-3 max-w-[220px]">
+                                              <div className="group/p relative">
+                                                <span className="text-[11px] text-neutral-400 block truncate cursor-default">{raodRow[13]}</span>
+                                                {raodRow[13] && (
+                                                  <div className="hidden group-hover/p:block absolute right-0 top-full mt-1.5 z-50 w-80 bg-neutral-800 border border-neutral-700 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] p-3">
+                                                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-semibold mb-1">Particulars</p>
+                                                    <p className="text-[11px] text-neutral-200 whitespace-normal break-words leading-relaxed">{raodRow[13]}</p>
+                                                  </div>
+                                                )}
+                                              </div>
                                             </td>
                                           </tr>
                                         );
                                       })}
                                     </tbody>
-                                    <tfoot className="bg-black">
+                                    <tfoot className="border-t-2 border-neutral-700/80 bg-black/50">
                                       <tr>
-                                        <td colSpan={3} className="px-2 py-1 font-bold text-green-400">TOTAL</td>
-                                        <td className="px-2 py-1 text-right font-bold"></td>
-                                        <td className="px-2 py-1 text-right font-bold text-emerald-300">
-                                          {(
-                                            parseAmount(row[13]) -
-                                            matchingRaods.reduce((sum, raodRow) => sum + parseAmount(raodRow[14]), 0)
-                                          ).toLocaleString("en-US", {
-                                            minimumFractionDigits: 0,
-                                            maximumFractionDigits: 2,
-                                          })}
+                                        <td colSpan={4} className="px-4 py-3">
+                                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Final Balance</span>
                                         </td>
-                                        <td></td>
+                                        <td className="px-4 py-3 text-right">
+                                          <span className="text-[11px] font-bold text-green-400">{fmt(totalObligated)}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                                          <span className={`text-sm font-bold ${finalBalance < 0 ? "text-red-400" : finalBalance === 0 ? "text-neutral-500" : "text-emerald-400"}`}>
+                                            {fmt(finalBalance)}
+                                          </span>
+                                        </td>
+                                        <td />
                                       </tr>
                                     </tfoot>
                                   </table>
@@ -546,33 +667,19 @@ function Records() {
                               </div>
                             </td>
                           </tr>
-                        )}
+                          );
+                        })()}
                       </React.Fragment>
                     );
                   })}
                 </tbody>
-                <tfoot className="bg-black sticky bottom-0 border-t-2 border-green-500/20">
+                <tfoot className="bg-black/90 sticky bottom-0 z-10 border-t-2 border-green-500/30">
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-sm font-bold text-green-400">TOTAL</td>
-                    <td className="px-6 py-4 text-sm font-bold text-white">
-                      {totals.amount.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-green-400">
-                      {totals.obligation.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-red-400">
-                      {totals.unobligated.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td colSpan={2}></td>
+                    <td colSpan={5} className="px-4 py-3 text-xs font-bold text-green-400 uppercase tracking-wider">Totals</td>
+                    <td className="px-4 py-3 text-xs font-bold text-white whitespace-nowrap">{fmt(totals.amount)}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-green-400 whitespace-nowrap">{fmt(totals.obligation)}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-red-400 whitespace-nowrap">{fmt(totals.unobligated)}</td>
+                    <td colSpan={2} />
                   </tr>
                 </tfoot>
               </table>
