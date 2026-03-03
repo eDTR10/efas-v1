@@ -20,6 +20,61 @@ const parseAmount = (value: string) => {
   return isNaN(parsed) ? 0 : parsed * multiplier;
 };
 
+const selectStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: '#0a0a0a',
+    borderColor: state.isFocused ? '#3B82F6' : '#262626',
+    boxShadow: state.isFocused ? '0 0 0 2px #3B82F644' : 'none',
+    color: '#ffffff',
+    minHeight: '44px',
+  }),
+  menu: (base: any) => ({
+    ...base,
+    backgroundColor: '#0a0a0a',
+    color: '#ffffff',
+    border: '1px solid #3B82F633',
+    zIndex: 10000,
+  }),
+  menuPortal: (base: any) => ({
+    ...base,
+    zIndex: 10000,
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? '#3B82F6'
+      : state.isFocused
+        ? '#171717'
+        : 'transparent',
+    color: state.isSelected ? '#ffffff' : '#e5e5e5',
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    color: '#ffffff',
+  }),
+  input: (base: any) => ({
+    ...base,
+    color: '#ffffff',
+  }),
+  placeholder: (base: any) => ({
+    ...base,
+    color: '#93C5FD',
+  }),
+  indicatorSeparator: (base: any) => ({
+    ...base,
+    backgroundColor: '#262626',
+  }),
+  dropdownIndicator: (base: any, state: any) => ({
+    ...base,
+    color: state.isFocused ? '#3B82F6' : '#737373',
+  }),
+  clearIndicator: (base: any) => ({
+    ...base,
+    color: '#737373',
+  }),
+};
+
 function Records() {
   const navigate = useNavigate();
 
@@ -268,60 +323,8 @@ function Records() {
                 isClearable
                 placeholder="Choose program..."
                 className="mt-1"
+                styles={selectStyles}
                 menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    backgroundColor: '#0a0a0a',
-                    borderColor: state.isFocused ? '#22c55e' : '#262626',
-                    boxShadow: state.isFocused ? '0 0 0 2px #22c55e44' : 'none',
-                    color: '#ffffff',
-                    minHeight: '44px',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: '#0a0a0a',
-                    color: '#ffffff',
-                    border: '1px solid #22c55e33',
-                  }),
-                  menuPortal: (base) => ({
-                    ...base,
-                    zIndex: 9999,
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isSelected
-                      ? '#16a34a'
-                      : state.isFocused
-                        ? '#171717'
-                        : 'transparent',
-                    color: state.isSelected ? '#ffffff' : '#e5e5e5',
-                  }),
-                  singleValue: (base) => ({
-                    ...base,
-                    color: '#ffffff',
-                  }),
-                  input: (base) => ({
-                    ...base,
-                    color: '#ffffff',
-                  }),
-                  placeholder: (base) => ({
-                    ...base,
-                    color: '#4ade80',
-                  }),
-                  indicatorSeparator: (base) => ({
-                    ...base,
-                    backgroundColor: '#262626',
-                  }),
-                  dropdownIndicator: (base, state) => ({
-                    ...base,
-                    color: state.isFocused ? '#22c55e' : '#737373',
-                  }),
-                  clearIndicator: (base) => ({
-                    ...base,
-                    color: '#737373',
-                  }),
-                }}
               />
             </div>
             <div className="flex-1">
@@ -335,60 +338,8 @@ function Records() {
                 isClearable
                 placeholder="Choose allotment..."
                 className="mt-1"
+                styles={selectStyles}
                 menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    backgroundColor: '#0a0a0a',
-                    borderColor: state.isFocused ? '#22c55e' : '#262626',
-                    boxShadow: state.isFocused ? '0 0 0 2px #22c55e44' : 'none',
-                    color: '#ffffff',
-                    minHeight: '44px',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: '#0a0a0a',
-                    color: '#ffffff',
-                    border: '1px solid #22c55e33',
-                  }),
-                  menuPortal: (base) => ({
-                    ...base,
-                    zIndex: 9999,
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isSelected
-                      ? '#16a34a'
-                      : state.isFocused
-                        ? '#171717'
-                        : 'transparent',
-                    color: state.isSelected ? '#ffffff' : '#e5e5e5',
-                  }),
-                  singleValue: (base) => ({
-                    ...base,
-                    color: '#ffffff',
-                  }),
-                  input: (base) => ({
-                    ...base,
-                    color: '#ffffff',
-                  }),
-                  placeholder: (base) => ({
-                    ...base,
-                    color: '#4ade80',
-                  }),
-                  indicatorSeparator: (base) => ({
-                    ...base,
-                    backgroundColor: '#262626',
-                  }),
-                  dropdownIndicator: (base, state) => ({
-                    ...base,
-                    color: state.isFocused ? '#22c55e' : '#737373',
-                  }),
-                  clearIndicator: (base) => ({
-                    ...base,
-                    color: '#737373',
-                  }),
-                }}
               />
             </div>
             <button

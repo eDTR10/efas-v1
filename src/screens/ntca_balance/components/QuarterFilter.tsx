@@ -53,7 +53,7 @@ const TableFilters: React.FC<TableFiltersProps> = ({
                     onClick={() => onSectionChange('all')}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200
             ${activeSection === 'all'
-                            ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(34,197,94,0.35)]'
+                            ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.35)]'
                             : 'bg-green-900/50 text-green-400 border border-green-700/40 hover:bg-green-800/60'}`}
                 >
                     All Sections
@@ -86,7 +86,7 @@ const TableFilters: React.FC<TableFiltersProps> = ({
                         onClick={() => onQuarterChange(q.key)}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200
               ${activeQuarter === q.key
-                                ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(34,197,94,0.35)]'
+                                ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.35)]'
                                 : 'bg-green-900/50 text-green-400 border border-green-700/40 hover:bg-green-800/60'}`}
                     >
                         {q.label}

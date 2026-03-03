@@ -9,15 +9,11 @@ function MainPortalContainer() {
     return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden bg-neutral-950">
             {/* Subtle background pattern */}
-            <div className="absolute inset-0 opacity-5 pointer-events-none"
-                style={{
-                    backgroundImage: `radial-gradient(circle at 25% 25%, #22c55e 0%, transparent 50%), radial-gradient(circle at 75% 75%, #16a34a 0%, transparent 50%)`,
-                }}
-            />
+            <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(circle_at_25%_25%,theme(colors.green.500)_0%,transparent_50%),radial-gradient(circle_at_75%_75%,theme(colors.green.700)_0%,transparent_50%)]" />
 
             {/* Floating glowing orbs */}
             <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-green-500/5 blur-3xl pointer-events-none animate-pulse" />
-            <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+            <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse [animation-delay:1s]" />
 
             {/* Logo */}
             <div className="relative z-20 mb-8 flex flex-col items-center">
@@ -46,7 +42,7 @@ function MainPortalContainer() {
                     className="group relative flex-1 min-h-[220px] rounded-3xl overflow-hidden
                         bg-neutral-900 border border-neutral-800
                         shadow-[0_8px_32px_rgba(0,0,0,0.4)]
-                        hover:shadow-[0_16px_48px_rgba(34,197,94,0.1)]
+                        hover:shadow-[0_16px_48px_rgba(59,130,246,0.15)]
                         hover:border-green-500/50
                         hover:scale-[1.02] active:scale-[0.99]
                         transition-all duration-300 ease-out
@@ -81,7 +77,7 @@ function MainPortalContainer() {
                     className="group relative flex-1 min-h-[220px] rounded-3xl overflow-hidden
                         bg-gradient-to-br from-green-900/80 to-green-950/90 border border-green-800
                         shadow-[0_8px_32px_rgba(16,185,129,0.08)]
-                        hover:shadow-[0_16px_48px_rgba(34,197,94,0.15)]
+                        hover:shadow-[0_16px_48px_rgba(59,130,246,0.2)]
                         hover:border-green-400
                         hover:scale-[1.02] active:scale-[0.99]
                         transition-all duration-300 ease-out

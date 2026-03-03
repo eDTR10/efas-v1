@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, FileSpreadsheet, FileCode, ChevronDown } from 'lucide-react';
 import {
     NTCARow,
@@ -86,7 +86,7 @@ const SectionHeaderRow: React.FC<{
                 aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
             >
                 <ChevronDown className={`w-4 h-4 text-green-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                 <span>{label}</span>
             </button>
         </td>
@@ -102,7 +102,7 @@ const DataRow: React.FC<{
 }> = ({ row, isEven, visibleSections, visibleQuarters }) => (
     <tr className={`group transition-all duration-200 ${isEven ? 'bg-green-950/20' : 'bg-transparent'} hover:bg-green-500/10`}>
         {/* PAP — sticky */}
-        <td className={`sticky left-0 z-10 ${isEven ? 'bg-[#052e16]' : 'bg-[#022c22]'} group-hover:bg-[#064e3b] px-4 py-3 text-green-100 font-medium border-b border-r border-green-700/20 min-w-[260px] leading-snug text-[11px] shadow-[2px_0_5px_rgba(0,0,0,0.2)]`}>
+        <td className={`sticky left-0 z-10 ${isEven ? 'bg-[#1E3A5F1F]' : 'bg-[#1E3A5F14]'} group-hover:bg-[#3B82F626] px-4 py-3 text-green-100 font-medium border-b border-r border-green-700/20 min-w-[260px] leading-snug text-[11px] shadow-[2px_0_5px_rgba(0,0,0,0.2)]`}>
             {row.pap}
         </td>
         <td className="px-3 py-3 text-green-400/60 border-b border-r border-green-700/20 font-mono whitespace-nowrap text-[10px]">
@@ -184,19 +184,73 @@ const GrandTotalRow: React.FC<{
 // ─── Main NTCATable ───────────────────────────────────────────────────────────
 const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarter }) => {
     const [showExport, setShowExport] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
     const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({});
 
     useEffect(() => {
         setExpandedGroups({});
         setExpandedSections({});
-    }, [rows]);
+    }, [rows, searchTerm]);
 
     const visibleSections =
         activeSection === 'all' ? SECTION_META : SECTION_META.filter((s) => s.key === activeSection);
 
     const visibleQuarters: QuarterKey[] =
         activeQuarter === 'all' ? ['q1', 'q2', 'q3', 'q4', 'total'] : [activeQuarter as unknown as QuarterKey];
+
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const matchesSearch = (row: NTCARow): boolean => {
+        if (!normalizedSearch) return true;
+
+        const baseValues = [row.pap, row.papCode, row.classType, row.saroNo]
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase());
+
+        const quarterValues = SECTION_META.flatMap((section) => {
+            const data = row[section.key] as QuarterData;
+            if (!data) return [];
+            return [data.q1, data.q2, data.q3, data.q4, data.total]
+                .filter((value) => value !== undefined && value !== null)
+                .map((value) => String(value).toLowerCase());
+        });
+
+        return [...baseValues, ...quarterValues].some((value) => value.includes(normalizedSearch));
+    };
+
+    const filteredTableRows = useMemo(() => {
+        if (!normalizedSearch) return rows;
+
+        const result: NTCARow[] = [];
+        let currentHeader: NTCARow | null = null;
+        let sectionRows: NTCARow[] = [];
+
+        const flushSection = () => {
+            if (!currentHeader) return;
+
+            const headerMatches = currentHeader.pap.toLowerCase().includes(normalizedSearch);
+            const matchedRows = headerMatches ? sectionRows : sectionRows.filter(matchesSearch);
+
+            if (matchedRows.length > 0) {
+                result.push(currentHeader, ...matchedRows);
+            }
+        };
+
+        for (const row of rows) {
+            if (row.isHeader) {
+                flushSection();
+                currentHeader = row;
+                sectionRows = [];
+                continue;
+            }
+
+            sectionRows.push(row);
+        }
+
+        flushSection();
+        return result;
+    }, [rows, normalizedSearch]);
 
     const totalCols = 4 + visibleSections.length * visibleQuarters.length;
 
@@ -205,7 +259,7 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
     let currentGroup: { id: string; groupKey: string; sectionId: string; rows: NTCARow[] } | null = null;
     let currentSectionId = 'section-ungrouped';
     let groupCounter = 0;
-    for (const row of rows) {
+    for (const row of filteredTableRows) {
         if (row.isHeader) {
             if (currentGroup) {
                 groupedRows.push(currentGroup);
@@ -225,16 +279,27 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
     }
     if (currentGroup) groupedRows.push(currentGroup);
 
+    const hasVisibleData = filteredTableRows.some((row) => !row.isHeader);
+
     let dataRowIndex = 0;
 
     return (
         <div className="flex flex-col gap-4">
             {/* Table Controls (Export) */}
-            <div className="flex justify-end items-center gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="w-full sm:w-[380px]">
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search PAP, code, class, SARO, amount..."
+                        className="w-full rounded-xl border border-green-700/40 bg-green-950/40 text-green-100 placeholder:text-green-400/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/40"
+                    />
+                </div>
                 <div className="relative">
                     <button
                         onClick={() => setShowExport(!showExport)}
-                        className="group flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl shadow-[0_4px_14px_rgba(34,197,94,0.4)] transition-all duration-300 transform active:scale-95"
+                        className="group flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl shadow-[0_4px_14px_rgba(59,130,246,0.4)] transition-all duration-300 transform active:scale-95"
                     >
                         <Download className="w-4 h-4" />
                         <span className="text-sm font-bold tracking-wide">Export Business Report</span>
@@ -294,7 +359,13 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                     <table className="w-full border-collapse">
                         <TableHead visibleSections={visibleSections} visibleQuarters={visibleQuarters} />
                         <tbody>
-                            {groupedRows.map((group) => {
+                            {!hasVisibleData ? (
+                                <tr>
+                                    <td colSpan={totalCols} className="px-4 py-8 text-center text-green-300/80 text-sm">
+                                        No matching records found.
+                                    </td>
+                                </tr>
+                            ) : groupedRows.map((group) => {
                                 // Section header rows
                                 if (group.groupKey.startsWith('header-')) {
                                     const row = group.rows[0];
@@ -334,10 +405,9 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                                             <td colSpan={totalCols} className="p-0 border-0">
                                                 <div className="flex items-center">
                                                     <button
-                                                        className={`flex items-center px-2 py-2 focus:outline-none ${isExpanded ? 'rotate-180' : ''}`}
+                                                        className={`flex items-center px-2 py-2 focus:outline-none transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                                                         aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
                                                         tabIndex={-1}
-                                                        style={{ transition: 'transform 0.2s' }}
                                                     >
                                                         <ChevronDown className="w-4 h-4 text-green-400" />
                                                     </button>
@@ -361,7 +431,9 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                                     </React.Fragment>
                                 );
                             })}
-                            <GrandTotalRow rows={rows} visibleSections={visibleSections} visibleQuarters={visibleQuarters} />
+                            {hasVisibleData && (
+                                <GrandTotalRow rows={filteredTableRows} visibleSections={visibleSections} visibleQuarters={visibleQuarters} />
+                            )}
                         </tbody>
                     </table>
                 </div>
