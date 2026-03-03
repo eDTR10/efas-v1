@@ -133,6 +133,7 @@ function Records() {
   const [selectedAllotment, setSelectedAllotment] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -173,34 +174,31 @@ function Records() {
     setSearchParams(searchParams);
   };
 
-  function getData() {
+  function getData(): Promise<void> {
     const settings = getSheetSettings();
-    readSheetData(settings.mdsRegR10Id, `${settings.mdsRegR10Sheet}`)
+    return readSheetData(settings.mdsRegR10Id, `${settings.mdsRegR10Sheet}`)
       .then((values) => {
-        if (values) {
-          setData(values);
-        }
+        if (values) setData(values);
       })
       .catch((error) => {
         console.log("Error fetching MDS Regular R10 sheet:", error);
       });
   }
 
-  function getDataRAOD() {
+  function getDataRAOD(): Promise<void> {
     const settings = getSheetSettings();
-    readSheetData(settings.raod2024Id, `${settings.raod2024Sheet}`)
+    return readSheetData(settings.raod2024Id, `${settings.raod2024Sheet}`)
       .then((values) => {
-        if (values) {
-          setRaod(values);
-        }
+        if (values) setRaod(values);
       })
       .catch((error) => {
         console.log("Error fetching 2025 sheet:", error);
       });
   }
+
   useEffect(() => {
-    getData();
-    getDataRAOD();
+    setLoading(true);
+    Promise.all([getData(), getDataRAOD()]).finally(() => setLoading(false));
   }, []);
 
   // Update these lines to get programs and allotments from correct columns
@@ -287,8 +285,8 @@ function Records() {
         onClose={() => {
           setSettingsOpen(false);
           setSheetSettings(getSheetSettings());
-          getData();
-          getDataRAOD();
+          setLoading(true);
+          Promise.all([getData(), getDataRAOD()]).finally(() => setLoading(false));
         }}
       />
 
@@ -314,8 +312,75 @@ function Records() {
 
       <div className="relative z-10 p-6 md:p-4 sm:p-3 xs:p-2">
 
+        {/* Skeleton Loading */}
+        {loading && (
+          <div className="animate-pulse">
+            {/* Filter skeleton */}
+            <div className="rounded-2xl bg-neutral-900/80 border border-neutral-800 p-5 mb-5">
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+                <div>
+                  <div className="h-3 w-20 bg-neutral-800 rounded mb-2" />
+                  <div className="h-11 bg-neutral-800 rounded-lg" />
+                </div>
+                <div>
+                  <div className="h-3 w-20 bg-neutral-800 rounded mb-2" />
+                  <div className="h-11 bg-neutral-800 rounded-lg" />
+                </div>
+              </div>
+            </div>
+            {/* Stats cards skeleton */}
+            <div className="mb-5">
+              <div className="grid grid-cols-3 sm:grid-cols-1 gap-4 mb-3">
+                {["yellow", "green", "red"].map((c) => (
+                  <div key={c} className="rounded-2xl bg-neutral-900/80 border border-neutral-800 p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-neutral-800 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="h-2.5 w-20 bg-neutral-800 rounded mb-2" />
+                      <div className="h-4 w-32 bg-neutral-700 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-4 py-3 flex items-center gap-3">
+                <div className="h-2.5 w-20 bg-neutral-800 rounded shrink-0" />
+                <div className="flex-1 h-2 rounded-full bg-neutral-800" />
+                <div className="h-3 w-10 bg-neutral-800 rounded shrink-0" />
+              </div>
+            </div>
+            {/* Table skeleton */}
+            <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900/80">
+              <div className="px-5 py-3 bg-black/60 border-b border-neutral-800 flex items-center gap-2">
+                <div className="w-1.5 h-5 rounded-full bg-green-900" />
+                <div className="h-3 w-24 bg-neutral-800 rounded" />
+              </div>
+              <table className="min-w-full">
+                <thead className="bg-black/80">
+                  <tr>
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <th key={i} className="px-4 py-3">
+                        <div className="h-2.5 bg-neutral-800 rounded" style={{ width: `${50 + (i % 3) * 20}px` }} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/40">
+                  {Array.from({ length: 7 }).map((_, ri) => (
+                    <tr key={ri}>
+                      {Array.from({ length: 10 }).map((_, ci) => (
+                        <td key={ci} className="px-4 py-3">
+                          <div className="h-3 bg-neutral-800 rounded" style={{ width: `${40 + ((ri + ci) % 4) * 20}px` }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Filter Section */}
-        <div className="rounded-2xl bg-neutral-900/80 backdrop-blur p-5 md:p-4 mb-5 border border-neutral-800 shadow-sm">
+        <div className={`rounded-2xl bg-neutral-900/80 backdrop-blur p-5 md:p-4 mb-5 border border-neutral-800 shadow-sm ${loading ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2 mb-4">
 
          
@@ -363,7 +428,7 @@ function Records() {
         </div>
 
         {/* Stats Cards */}
-        {filteredData.length > 1 && (() => {
+        {!loading && filteredData.length > 1 && (() => {
           const obligatedPct = totals.amount > 0 ? Math.min(100, (totals.obligation / totals.amount) * 100) : 0;
           const unobligatedPct = 100 - obligatedPct;
           const barColor = obligatedPct >= 100 ? "bg-red-500" : obligatedPct >= 75 ? "bg-amber-400" : "bg-green-500";
@@ -425,7 +490,7 @@ function Records() {
         })()}
 
         {/* Records Table Section */}
-        <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900/80 shadow-sm">
+        <div className={`rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-900/80 shadow-sm ${loading ? 'hidden' : ''}`}>
           {/* Table header row */}
           <div className="px-5 md:px-4 py-3 bg-black/60 border-b border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-2">

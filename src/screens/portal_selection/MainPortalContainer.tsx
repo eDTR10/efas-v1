@@ -22,9 +22,7 @@ function MainPortalContainer() {
 
             {/* Header */}
             <div className="relative z-10 text-center mb-12 md:mb-8 xs:mb-6 px-4">
-                <p className="text-green-400 text-sm xs:text-xs font-semibold tracking-[0.3em] xs:tracking-[0.15em] uppercase mb-3 opacity-80">
-                    eFAS System
-                </p>
+           
                 <h1 className="text-white text-4xl md:text-3xl xs:text-2xl phone:text-xl font-bold tracking-tight">
                     Select a Portal
                 </h1>
@@ -34,7 +32,7 @@ function MainPortalContainer() {
             </div>
 
             {/* Portal Buttons */}
-            <div className="relative z-10 flex flex-row sm:flex-col gap-6 sm:gap-4 px-6 xs:px-4 w-full max-w-3xl md:max-w-xl sm:max-w-sm justify-center">
+            <div className="relative z-10 flex flex-col sm:flex-col gap-6 sm:gap-4 px-6 xs:px-4 w-full max-w-3xl md:max-w-xl sm:max-w-sm justify-center">
                 {/* NTCA Balance */}
                 <button
                     id="portal-ntca-balance"
