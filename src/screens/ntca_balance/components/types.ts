@@ -25,6 +25,7 @@ export interface NTCARow {
 export type ActiveSection = 'ntcaReceived' | 'disbursements' | 'ntcaBalance';
 export type ActiveQuarter = 'q1' | 'q2' | 'q3' | 'q4' | 'all';
 export type ActiveBudgetCategory = 'regular' | 'special';
+export type NTCAYear = '2026' | '2025';
 
 export interface SectionMeta {
     key: ActiveSection;

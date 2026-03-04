@@ -1,10 +1,15 @@
 import React from 'react';
-import { ActiveSection, ActiveQuarter, ActiveBudgetCategory, SECTION_META } from './types';
+import { ActiveSection, ActiveQuarter, ActiveBudgetCategory, NTCAYear, SECTION_META } from './types';
 
 interface TableFiltersProps {
+    activeYear: NTCAYear;
     activeSection: ActiveSection | 'all';
     activeQuarter: ActiveQuarter;
     activeBudgetCategory: ActiveBudgetCategory;
+    lastUpdated: Date | null;
+    loading: boolean;
+    onRefresh: () => void;
+    onYearChange: (y: NTCAYear) => void;
     onSectionChange: (s: ActiveSection | 'all') => void;
     onQuarterChange: (q: ActiveQuarter) => void;
     onBudgetCategoryChange: (c: ActiveBudgetCategory) => void;
@@ -19,15 +24,37 @@ const QUARTERS: { key: ActiveQuarter; label: string }[] = [
 ];
 
 const TableFilters: React.FC<TableFiltersProps> = ({
+    activeYear,
     activeSection,
     activeQuarter,
     activeBudgetCategory,
+    lastUpdated,
+    loading,
+    onRefresh,
+    onYearChange,
     onSectionChange,
     onQuarterChange,
     onBudgetCategoryChange,
 }) => {
     return (
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="w-max min-w-full flex items-center gap-3">
+            {/* ── Year filter ───────────────────────────────────────────────── */}
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-green-500/50 text-xs uppercase tracking-widest mr-1">Year:</span>
+
+                <select
+                    value={activeYear}
+                    onChange={(e) => onYearChange(e.target.value as NTCAYear)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-green-900/50 text-green-300 border border-green-700/40 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-green-500/40"
+                >
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:block w-px bg-green-700/30 self-stretch" />
+
             {/* ── Budget category filter ────────────────────────────────────── */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-green-500/50 text-xs uppercase tracking-widest mr-1">Category:</span>
@@ -43,55 +70,71 @@ const TableFilters: React.FC<TableFiltersProps> = ({
             </div>
 
             {/* Divider */}
-            <div className="hidden sm:block w-px bg-green-700/30 self-stretch" />
+            <div className="hidden lg:block w-px bg-green-700/30 self-stretch" />
 
             {/* ── Section filter ─────────────────────────────────────────────── */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-green-500/50 text-xs uppercase tracking-widest mr-1">View:</span>
 
-                <button
-                    onClick={() => onSectionChange('all')}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200
-            ${activeSection === 'all'
-                            ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.35)]'
-                            : 'bg-green-900/50 text-green-400 border border-green-700/40 hover:bg-green-800/60'}`}
+                <select
+                    value={activeSection}
+                    onChange={(e) => onSectionChange(e.target.value as ActiveSection | 'all')}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-green-900/50 text-green-300 border border-green-700/40 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-green-500/40"
                 >
-                    All Sections
-                </button>
-
-                {SECTION_META.map((sm) => (
-                    <button
-                        key={sm.key}
-                        onClick={() => onSectionChange(sm.key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200
-              ${activeSection === sm.key
-                                ? `${sm.bg} ${sm.text} border ${sm.border} shadow-lg`
-                                : 'bg-green-900/50 text-green-400 border border-green-700/40 hover:bg-green-800/60'}`}
-                    >
-                        {sm.label}
-                    </button>
-                ))}
+                    <option value="all">All Sections</option>
+                    {SECTION_META.map((sm) => (
+                        <option key={sm.key} value={sm.key}>
+                            {sm.label}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Divider */}
-            <div className="hidden sm:block w-px bg-green-700/30 self-stretch" />
+            <div className="hidden lg:block w-px bg-green-700/30 self-stretch" />
 
             {/* ── Quarter filter ─────────────────────────────────────────────── */}
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-green-500/50 text-xs uppercase tracking-widest mr-1">Quarter:</span>
 
-                {QUARTERS.map((q) => (
-                    <button
-                        key={q.key}
-                        onClick={() => onQuarterChange(q.key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200
-              ${activeQuarter === q.key
-                                ? 'bg-green-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.35)]'
-                                : 'bg-green-900/50 text-green-400 border border-green-700/40 hover:bg-green-800/60'}`}
+                <select
+                    value={activeQuarter}
+                    onChange={(e) => onQuarterChange(e.target.value as ActiveQuarter)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-green-900/50 text-green-300 border border-green-700/40 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-green-500/40"
+                >
+                    {QUARTERS.map((q) => (
+                        <option key={q.key} value={q.key}>
+                            {q.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="ml-auto flex items-center gap-3 pl-2">
+                {lastUpdated && (
+                    <span className="text-neutral-500 text-xs hidden sm:block whitespace-nowrap">
+                        Updated {lastUpdated.toLocaleTimeString()}
+                    </span>
+                )}
+                <button
+                    onClick={onRefresh}
+                    disabled={loading}
+                    title="Refresh data"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+                bg-neutral-800 border border-neutral-700 text-green-400
+                hover:bg-neutral-700 hover:text-green-300 hover:border-green-500/40
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-all duration-200 text-xs font-medium whitespace-nowrap"
+                >
+                    <svg
+                        className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     >
-                        {q.label}
-                    </button>
-                ))}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {loading ? 'Loading…' : 'Refresh'}
+                </button>
             </div>
         </div>
     );

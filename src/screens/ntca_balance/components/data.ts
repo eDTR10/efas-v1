@@ -1,4 +1,4 @@
-import { NTCARow, parseAmount } from './types';
+import { NTCARow, NTCAYear, parseAmount } from './types';
 
 const REQUIRED_PAP_TITLES = [
     'Personal Services',
@@ -30,8 +30,16 @@ const normalizeTitle = (value: string): string =>
         .replace(/[^a-z0-9]/g, '');
 
 // ─── Google Sheet config ──────────────────────────────────────────────────────
-const SHEET_ID = '1j3_tmDE774xHsLzCYY0nPpckexAbJRVBmSX7x4PNpxY';
-const SHEET_NAME = '2026 NTCA BALANCE';
+const SHEET_CONFIG: Record<NTCAYear, { id: string; name: string }> = {
+    '2026': {
+        id: '1j3_tmDE774xHsLzCYY0nPpckexAbJRVBmSX7x4PNpxY',
+        name: '2026 NTCA BALANCE',
+    },
+    '2025': {
+        id: '1oBrHEaM0NdaKMKFkLmsFbLqSDKgjJ5V-zoCfSkdRynU',
+        name: 'Revised NTCA BALANCE (MDS Regular)',
+    },
+};
 const API_KEY = import.meta.env.VITE_API_KEY;
 
 // Column indices (0-based) from the sheet:
@@ -91,9 +99,10 @@ const isHeaderRow = (raw: string[]): boolean =>
  * Fetch live NTCA Balance data from Google Sheets.
  * Returns an array of NTCARow objects (including section headers).
  */
-export const fetchNTCAData = async (): Promise<NTCARow[]> => {
-    const encodedSheet = encodeURIComponent(`${SHEET_NAME}!A:U`);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodedSheet}?key=${API_KEY}`;
+export const fetchNTCAData = async (year: NTCAYear = '2026'): Promise<NTCARow[]> => {
+    const config = SHEET_CONFIG[year] ?? SHEET_CONFIG['2026'];
+    const encodedSheet = encodeURIComponent(`${config.name}!A:U`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.id}/values/${encodedSheet}?key=${API_KEY}`;
 
     const res = await fetch(url);
     if (!res.ok) {

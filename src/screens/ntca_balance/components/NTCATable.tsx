@@ -286,8 +286,8 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
     return (
         <div className="flex flex-col gap-4">
             {/* Table Controls (Export) */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="w-full sm:w-[380px]">
+            <div className="grid grid-cols-4 md:grid-cols-[minmax(0,2fr)_auto] items-center gap-3">
+                <div className="w-full col-span-3">
                     <input
                         type="text"
                         value={searchTerm}
@@ -296,7 +296,7 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                         className="w-full rounded-xl border border-green-700/40 bg-green-950/40 text-green-100 placeholder:text-green-400/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/40"
                     />
                 </div>
-                <div className="relative">
+                <div className="relative md:justify-self-end">
                     <button
                         onClick={() => setShowExport(!showExport)}
                         className="group flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl shadow-[0_4px_14px_rgba(59,130,246,0.4)] transition-all duration-300 transform active:scale-95"

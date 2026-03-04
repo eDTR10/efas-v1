@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import NTCAHeader from './components/NTCAHeader';
 import TableFilters from './components/QuarterFilter';
 import NTCATable from './components/NTCATable';
-import { NTCARow, ActiveSection, ActiveQuarter, ActiveBudgetCategory } from './components/types';
+import { NTCARow, ActiveSection, ActiveQuarter, ActiveBudgetCategory, NTCAYear } from './components/types';
 import { fetchNTCAData } from './components/data';
 
 const REGULAR_TITLES = [
@@ -32,6 +32,12 @@ const normalizeTitle = (value: string): string =>
     value
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '');
+
+const formatPeso = (value: number): string =>
+    value.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 const LoadingSkeleton: React.FC = () => (
@@ -83,12 +89,13 @@ const NTCABalanceMainContainer: React.FC = () => {
     const [activeSection, setActiveSection] = useState<ActiveSection | 'all'>('all');
     const [activeQuarter, setActiveQuarter] = useState<ActiveQuarter>('all');
     const [activeBudgetCategory, setActiveBudgetCategory] = useState<ActiveBudgetCategory>('regular');
+    const [activeYear, setActiveYear] = useState<NTCAYear>('2026');
 
     const loadData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchNTCAData();
+            const data = await fetchNTCAData(activeYear);
             setRows(data);
             setLastUpdated(new Date());
         } catch (err: unknown) {
@@ -96,7 +103,7 @@ const NTCABalanceMainContainer: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeYear]);
 
     useEffect(() => {
         loadData();
@@ -128,6 +135,32 @@ const NTCABalanceMainContainer: React.FC = () => {
         return selected;
     }, [rows, activeBudgetCategory]);
 
+    const grandTotals = useMemo(() => {
+        const dataRows = filteredRows.filter((row) => !row.isHeader);
+
+        const valueForQuarter = (quarterData: { q1: number; q2: number; q3: number; q4: number; total: number }) => {
+            if (activeQuarter !== 'all') {
+                return quarterData[activeQuarter] ?? 0;
+            }
+
+            if ((quarterData.total ?? 0) !== 0) {
+                return quarterData.total;
+            }
+
+            return (quarterData.q1 ?? 0) + (quarterData.q2 ?? 0) + (quarterData.q3 ?? 0) + (quarterData.q4 ?? 0);
+        };
+
+        return dataRows.reduce(
+            (acc, row) => {
+                acc.ntca += valueForQuarter(row.ntcaReceived);
+                acc.disbursements += valueForQuarter(row.disbursements);
+                acc.balance += valueForQuarter(row.ntcaBalance);
+                return acc;
+            },
+            { ntca: 0, disbursements: 0, balance: 0 }
+        );
+    }, [filteredRows, activeQuarter]);
+
     return (
         <div className="min-h-screen w-full bg-neutral-950 relative overflow-hidden">
             {/* Decorative orbs */}
@@ -146,45 +179,42 @@ const NTCABalanceMainContainer: React.FC = () => {
             <main className="relative z-10 px-4 py-8">
 
                 {/* Top meta row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col gap-4 mb-6">
                     {/* Filters */}
-                    <TableFilters
-                        activeSection={activeSection}
-                        activeQuarter={activeQuarter}
-                        activeBudgetCategory={activeBudgetCategory}
-                        onSectionChange={setActiveSection}
-                        onQuarterChange={setActiveQuarter}
-                        onBudgetCategoryChange={setActiveBudgetCategory}
-                    />
-
-                    {/* Refresh + last updated */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                        {lastUpdated && (
-                            <span className="text-neutral-500 text-xs hidden sm:block">
-                                Updated {lastUpdated.toLocaleTimeString()}
-                            </span>
-                        )}
-                        <button
-                            onClick={loadData}
-                            disabled={loading}
-                            title="Refresh data"
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
-                bg-neutral-800 border border-neutral-700 text-green-400
-                hover:bg-neutral-700 hover:text-green-300 hover:border-green-500/40
-                disabled:opacity-40 disabled:cursor-not-allowed
-                transition-all duration-200 text-xs font-medium"
-                        >
-                            <svg
-                                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            {loading ? 'Loading…' : 'Refresh'}
-                        </button>
+                    <div className="w-full overflow-x-auto pb-1">
+                        <TableFilters
+                            activeYear={activeYear}
+                            activeSection={activeSection}
+                            activeQuarter={activeQuarter}
+                            activeBudgetCategory={activeBudgetCategory}
+                            lastUpdated={lastUpdated}
+                            loading={loading}
+                            onRefresh={loadData}
+                            onYearChange={setActiveYear}
+                            onSectionChange={setActiveSection}
+                            onQuarterChange={setActiveQuarter}
+                            onBudgetCategoryChange={setActiveBudgetCategory}
+                        />
                     </div>
                 </div>
+
+                {/* Grand total cards */}
+                {!loading && !error && (
+                    <div className="grid grid-cols-3 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-5">
+                        <div className="rounded-2xl border border-sky-500/30 bg-sky-950/30 backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-sky-300/70">Grand Total NTCA</p>
+                            <p className="mt-1 text-lg font-bold text-sky-200">₱ {formatPeso(grandTotals.ntca)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-violet-500/30 bg-violet-950/30 backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-violet-300/70">Grand Total Disbursement</p>
+                            <p className="mt-1 text-lg font-bold text-violet-200">₱ {formatPeso(grandTotals.disbursements)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-emerald-300/70">Grand Total NTCA Balance</p>
+                            <p className="mt-1 text-lg font-bold text-emerald-200">₱ {formatPeso(grandTotals.balance)}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Row count badge */}
                 {!loading && !error && filteredRows.length > 0 && (
