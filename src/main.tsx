@@ -33,6 +33,10 @@ const NTCABalanceMainContainer = lazy(() =>
   wait(1300).then(() => import("./screens/ntca_balance/NTCABalanceMainContainer.tsx"))
 );
 
+const NTCARequestMainContainer = lazy(() =>
+  wait(1300).then(() => import("./screens/ntca_request/NTCARequestMainContainer.tsx"))
+);
+
 // const Login = lazy(() =>
 //   wait(1300).then(() => import("./screens/auth/Login.tsx"))
 // );
@@ -66,6 +70,14 @@ const router = createBrowserRouter([
     element: <>
       <Suspense fallback={<Loader />}>
         <NTCABalanceMainContainer />
+      </Suspense>
+    </>,
+  },
+  {
+    path: "/efas-v1/ntca-request",
+    element: <>
+      <Suspense fallback={<Loader />}>
+        <NTCARequestMainContainer />
       </Suspense>
     </>,
   },

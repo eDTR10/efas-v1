@@ -22,7 +22,7 @@ function MainPortalContainer() {
 
             {/* Header */}
             <div className="relative z-10 text-center mb-12 md:mb-8 xs:mb-6 px-4">
-           
+
                 <h1 className="text-white text-4xl md:text-3xl xs:text-2xl phone:text-xl font-bold tracking-tight">
                     Select a Portal
                 </h1>
@@ -32,7 +32,43 @@ function MainPortalContainer() {
             </div>
 
             {/* Portal Buttons */}
-            <div className="relative z-10 flex flex-col sm:flex-col gap-6 sm:gap-4 px-6 xs:px-4 w-full max-w-3xl md:max-w-xl sm:max-w-sm justify-center">
+            <div
+                className="relative z-10 grid grid-cols-3 lg:grid-cols-1 gap-6 md:gap-5 px-6 xs:px-4 w-full max-w-5xl md:max-w-3xl sm:max-w-xl justify-center"
+            >
+                {/* NTCA Request */}
+                <button
+                    id="portal-ntca-request"
+                    onClick={() => navigate('/efas-v1/ntca-request')}
+                    className="group relative flex-1 min-h-[220px] md:min-h-[190px] xs:min-h-[160px] rounded-3xl xs:rounded-2xl overflow-hidden
+                        bg-gradient-to-br from-sky-950/85 via-neutral-900 to-emerald-950/90 border border-sky-800/70
+                        shadow-[0_8px_32px_rgba(14,165,233,0.10)]
+                        hover:shadow-[0_16px_48px_rgba(56,189,248,0.22)]
+                        hover:border-sky-400/70
+                        hover:scale-[1.03] active:scale-[0.98]
+                        transition-all duration-300 ease-out
+                        cursor-pointer text-left p-8 md:p-6 xs:p-5 flex flex-col justify-between"
+                >
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-sky-300/10 to-transparent pointer-events-none z-0" />
+                    <div className="w-14 h-14 xs:w-10 xs:h-10 rounded-2xl xs:rounded-xl bg-sky-800/40 border border-sky-700 flex items-center justify-center mb-6 xs:mb-4 group-hover:bg-sky-700 group-hover:border-sky-400 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <svg className="w-7 h-7 xs:w-5 xs:h-5 text-sky-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2zm3-5h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 className="text-white text-2xl md:text-xl xs:text-lg font-bold tracking-tight group-hover:text-sky-200 transition-colors duration-200">
+                            NTCA Request
+                        </h2>
+                        <p className="text-neutral-400 text-sm xs:text-xs mt-1">
+                            Review monthly request schedules and add request rows
+                        </p>
+                    </div>
+                    <div className="absolute bottom-6 right-6 xs:bottom-4 xs:right-4 w-9 h-9 xs:w-7 xs:h-7 rounded-full bg-sky-900/40 border border-sky-700 flex items-center justify-center group-hover:bg-sky-800/70 group-hover:border-sky-400 group-hover:translate-x-1 transition-all duration-300">
+                        <svg className="w-4 h-4 xs:w-3 xs:h-3 text-sky-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </button>
                 {/* NTCA Balance */}
                 <button
                     id="portal-ntca-balance"
@@ -70,6 +106,7 @@ function MainPortalContainer() {
                         </svg>
                     </div>
                 </button>
+
                 {/* RAOD */}
                 <button
                     id="portal-raod"
