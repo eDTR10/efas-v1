@@ -1,9 +1,145 @@
-import { readSheetData } from "./../../../plugin/googleSheets";
+import { getSheetMetadata, readSheetData } from "./../../../plugin/googleSheets";
 import SheetSettingsModal, { getSheetSettings } from "./../../../components/SheetSettingsModal";
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import logo from '../../../assets/eFAS_Logo.png';
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type YearSourceRow = {
+  year: string;
+  raodUrl: string;
+  saroUrl: string;
+};
+
+type ResolvedSheetSource = {
+  spreadsheetId: string;
+  range: string;
+};
+
+const YEAR_SOURCE_SHEET_ID = "1f-cel_Qx8R5KmrLa7w1itrPUo69DwvtRuC0A1kVoHmg";
+const YEAR_SOURCE_RANGE = "A:C";
+const DEFAULT_TABLE_RANGE = "A:ZZ";
+
+const DEFAULT_SARO_DATA = [
+  [
+    "REGION",
+    "DATE RECD IN EMAIL",
+    "DATE OF SARO",
+    "ALLOTMENT NO.",
+    "PROGRAM",
+    "Notes/Validity",
+    "Total Amount",
+    "PAP",
+    "DESCRIPTION",
+    "CLASS TYPE",
+    "FUND TYPE",
+    "Object Code no.",
+    "Object Code Desc",
+    "AMOUNT",
+    "PURPOSE",
+    "REGION X",
+    "NCA AMOUNT",
+    "DATE",
+    "NCA NO.",
+    "BALANCE"
+  ]
+];
+
+const DEFAULT_RAOD_DATA = [
+  [
+    "PAP",
+    "PAP CODE",
+    "DATE OF SARO",
+    "SARO NO",
+    "ALLOTMENT AMOUNT",
+    "OBJECT TITLE",
+    "OBJECT CODE",
+    "DATE OF OBLIGATION",
+    "Description - Fund Type",
+    "CLASS TYPE",
+    "fund source",
+    "ORS NO.",
+    "NAME OF CLAIMANT",
+    "PARTICULARS",
+    "OBLIGATED AMOUNT",
+    "DATE",
+    "ADA/CHECK",
+    "CASH",
+    "NON TRA",
+    "BALANCE"
+  ]
+];
+
+const parseSpreadsheetId = (urlOrId: string) => {
+  if (!urlOrId) return "";
+  const trimmed = urlOrId.trim();
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : trimmed;
+};
+
+const parseGidFromUrl = (url: string): number | null => {
+  if (!url) return null;
+
+  try {
+    const parsedUrl = new URL(url);
+    const gidFromSearch = parsedUrl.searchParams.get("gid");
+    if (gidFromSearch && /^\d+$/.test(gidFromSearch)) {
+      return Number(gidFromSearch);
+    }
+
+    const gidFromHash = parsedUrl.hash.match(/gid=(\d+)/);
+    if (gidFromHash) {
+      return Number(gidFromHash[1]);
+    }
+  } catch {
+    const gidFromRaw = url.match(/gid=(\d+)/);
+    if (gidFromRaw) {
+      return Number(gidFromRaw[1]);
+    }
+  }
+
+  return null;
+};
+
+const sanitizeSheetName = (sheetName: string) => {
+  // Escape single quotes so the sheet title is valid in A1 notation.
+  return `'${sheetName.replace(/'/g, "''")}'`;
+};
+
+const resolveSheetSourceFromUrl = async (sheetUrl: string): Promise<ResolvedSheetSource | null> => {
+  const spreadsheetId = parseSpreadsheetId(sheetUrl);
+  if (!spreadsheetId) return null;
+
+  try {
+    const sheets = await getSheetMetadata(spreadsheetId);
+    const gid = parseGidFromUrl(sheetUrl);
+    const sheetList = Array.isArray(sheets) ? sheets : [];
+    const matchedSheet = typeof gid === "number"
+      ? sheetList.find((sheet: any) => sheet?.properties?.sheetId === gid)
+      : null;
+    const fallbackSheet = sheetList[0];
+    const sheetTitle: string | undefined = matchedSheet?.properties?.title || fallbackSheet?.properties?.title;
+    const range = sheetTitle
+      ? `${sanitizeSheetName(sheetTitle)}!${DEFAULT_TABLE_RANGE}`
+      : DEFAULT_TABLE_RANGE;
+
+    return {
+      spreadsheetId,
+      range,
+    };
+  } catch (error) {
+    console.log("Error resolving sheet metadata from URL:", error);
+    return {
+      spreadsheetId,
+      range: DEFAULT_TABLE_RANGE,
+    };
+  }
+};
 
 
 // Move parseAmount function before component definition
@@ -80,56 +216,11 @@ function Records() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [_sheetSettings, setSheetSettings] = useState(getSheetSettings());
 
-  const [data, setData] = useState([
-    [
-      "REGION",
-      "DATE RECD IN EMAIL",
-      "DATE OF SARO",
-      "ALLOTMENT NO.",
-      "PROGRAM",
-      "Notes/Validity",
-      "Total Amount",
-      "PAP",
-      "DESCRIPTION",
-      "CLASS TYPE",
-      "FUND TYPE",
-      "Object Code no.",
-      "Object Code Desc",
-      "AMOUNT",
-      "PURPOSE",
-      "REGION X",
-      "NCA AMOUNT",
-      "DATE",
-      "NCA NO.",
-      "BALANCE"
-    ]
-  ]);
+  const [data, setData] = useState(DEFAULT_SARO_DATA);
+  const [raod, setRaod] = useState(DEFAULT_RAOD_DATA);
+  const [yearSources, setYearSources] = useState<YearSourceRow[]>([]);
 
-  const [raod, setRaod] = useState([
-    [
-      "PAP",
-      "PAP CODE",
-      "DATE OF SARO",
-      "SARO NO",
-      "ALLOTMENT AMOUNT",
-      "OBJECT TITLE",
-      "OBJECT CODE",
-      "DATE OF OBLIGATION",
-      "Description - Fund Type",
-      "CLASS TYPE",
-      "fund source",
-      "ORS NO.",
-      "NAME OF CLAIMANT",
-      "PARTICULARS",
-      "OBLIGATED AMOUNT",
-      "DATE",
-      "ADA/CHECK",
-      "CASH",
-      "NON TRA",
-      "BALANCE"
-    ]
-  ]);
-
+  const [selectedYear, setSelectedYear] = useState("");
   const [selectedAllotment, setSelectedAllotment] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedRow, setSelectedRow] = useState<any>(null);
@@ -138,81 +229,252 @@ function Records() {
   const [searchParams, setSearchParams] = useSearchParams();
 
 
+  const updateFilterParamsInUrl = (updates: Partial<Record<"program" | "allotment", string>>) => {
+    const params = new URLSearchParams(window.location.search);
+
+    (Object.keys(updates) as Array<"program" | "allotment">).forEach((key) => {
+      const value = updates[key];
+      if (typeof value === "string" && value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+
+    const search = params.toString();
+    const nextUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  };
+
   // Initialize selected values from URL parameters
   useEffect(() => {
+    const yearParam = searchParams.get('year');
     const programParam = searchParams.get('program');
     const allotmentParam = searchParams.get('allotment');
 
-    if (programParam) setSelectedProgram(programParam);
-    if (allotmentParam) setSelectedAllotment(allotmentParam);
+    setSelectedYear(yearParam || "");
+    setSelectedProgram(programParam || "");
+    setSelectedAllotment(allotmentParam || "");
   }, [searchParams]);
 
   // Modify the onChange handlers to update URL
-  const handleProgramChange = (selectedOption: any) => {
+  const handleYearChange = (selectedOption: SelectOption | null) => {
+    const newValue = selectedOption ? selectedOption.value : "";
+    setSelectedYear(newValue);
+    setSelectedProgram("");
+    setSelectedAllotment("");
+    setSelectedRow(null);
+
+    const params = new URLSearchParams(searchParams);
+    if (newValue) {
+      params.set("year", newValue);
+    } else {
+      params.delete("year");
+    }
+    params.delete("program");
+    params.delete("allotment");
+    setSearchParams(params);
+  };
+
+  const handleProgramChange = (selectedOption: SelectOption | null) => {
     const newValue = selectedOption ? selectedOption.value : "";
     setSelectedProgram(newValue);
 
-    // Update URL parameters
-    if (newValue) {
-      searchParams.set('program', newValue);
-    } else {
-      searchParams.delete('program');
+    if (!newValue) {
+      setSelectedAllotment("");
+      updateFilterParamsInUrl({ program: "", allotment: "" });
+      return;
     }
-    setSearchParams(searchParams);
+
+    updateFilterParamsInUrl({ program: newValue });
   };
 
-  const handleAllotmentChange = (selectedOption: any) => {
+  const handleAllotmentChange = (selectedOption: SelectOption | null) => {
     const newValue = selectedOption ? selectedOption.value : "";
     setSelectedAllotment(newValue);
-
-    // Update URL parameters
-    if (newValue) {
-      searchParams.set('allotment', newValue);
-    } else {
-      searchParams.delete('allotment');
-    }
-    setSearchParams(searchParams);
+    updateFilterParamsInUrl({ allotment: newValue });
   };
 
-  function getData(): Promise<void> {
-    const settings = getSheetSettings();
-    return readSheetData(settings.mdsRegR10Id, `${settings.mdsRegR10Sheet}`)
-      .then((values) => {
-        if (values) setData(values);
-      })
-      .catch((error) => {
-        console.log("Error fetching MDS Regular R10 sheet:", error);
-      });
-  }
+  const getYearSources = async (): Promise<YearSourceRow[]> => {
+    try {
+      const values = await readSheetData(YEAR_SOURCE_SHEET_ID, YEAR_SOURCE_RANGE);
+      if (!values || values.length <= 1) {
+        setYearSources([]);
+        return [];
+      }
 
-  function getDataRAOD(): Promise<void> {
-    const settings = getSheetSettings();
-    return readSheetData(settings.raod2024Id, `${settings.raod2024Sheet}`)
-      .then((values) => {
-        if (values) setRaod(values);
-      })
-      .catch((error) => {
-        console.log("Error fetching 2025 sheet:", error);
-      });
-  }
+      const parsedRows: YearSourceRow[] = values
+        .slice(1)
+        .map((row: any[]) => ({
+          year: String(row[0] || "").trim(),
+          raodUrl: String(row[1] || "").trim(),
+          saroUrl: String(row[2] || "").trim(),
+        }))
+        .filter((row: YearSourceRow) => row.year && row.raodUrl && row.saroUrl)
+        .sort((a: YearSourceRow, b: YearSourceRow) => {
+          const yearA = Number(a.year);
+          const yearB = Number(b.year);
+
+          if (!Number.isNaN(yearA) && !Number.isNaN(yearB)) {
+            return yearB - yearA;
+          }
+
+          return b.year.localeCompare(a.year);
+        });
+
+      setYearSources(parsedRows);
+      return parsedRows;
+    } catch (error) {
+      console.log("Error fetching year source sheet:", error);
+      setYearSources([]);
+      return [];
+    }
+  };
 
   useEffect(() => {
+    let isActive = true;
+
+    const initializeYearSources = async () => {
+      setLoading(true);
+      const rows = await getYearSources();
+      if (!isActive) return;
+
+      if (rows.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const yearFromUrl = params.get("year");
+      const isValidUrlYear = !!yearFromUrl && rows.some((row) => row.year === yearFromUrl);
+      const initialYear = isValidUrlYear ? yearFromUrl : rows[0].year;
+
+      setSelectedYear(initialYear);
+
+      if (params.get("year") !== initialYear) {
+        params.set("year", initialYear);
+        setSearchParams(params, { replace: true });
+      }
+    };
+
+    initializeYearSources();
+
+    return () => {
+      isActive = false;
+    };
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    if (!selectedYear || yearSources.length === 0) return;
+
+    const selectedSource = yearSources.find((row) => row.year === selectedYear);
+    if (!selectedSource) return;
+
+    let isActive = true;
     setLoading(true);
-    Promise.all([getData(), getDataRAOD()]).finally(() => setLoading(false));
-  }, []);
 
-  // Update these lines to get programs and allotments from correct columns
-  const allotment = [...new Set(data.slice(1).map((row) => row[3]))]; // ALLOTMENT NO.
-  const programs = [...new Set(data.slice(1).map((row) => row[8]))];  // PROGRAM from column 4 (PROGRAM)
+    const loadYearData = async () => {
+      try {
+        const [saroSource, raodSource] = await Promise.all([
+          resolveSheetSourceFromUrl(selectedSource.saroUrl),
+          resolveSheetSourceFromUrl(selectedSource.raodUrl),
+        ]);
 
-  const programOptions = programs.map((program) => ({
+        const [saroValues, raodValues] = await Promise.all([
+          saroSource ? readSheetData(saroSource.spreadsheetId, saroSource.range) : Promise.resolve(DEFAULT_SARO_DATA),
+          raodSource ? readSheetData(raodSource.spreadsheetId, raodSource.range) : Promise.resolve(DEFAULT_RAOD_DATA),
+        ]);
+
+        if (!isActive) return;
+
+        setData(saroValues && saroValues.length > 0 ? saroValues : DEFAULT_SARO_DATA);
+        setRaod(raodValues && raodValues.length > 0 ? raodValues : DEFAULT_RAOD_DATA);
+        setSelectedRow(null);
+      } catch (error) {
+        if (!isActive) return;
+        console.log(`Error fetching data for year ${selectedYear}:`, error);
+        setData(DEFAULT_SARO_DATA);
+        setRaod(DEFAULT_RAOD_DATA);
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadYearData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedYear, yearSources]);
+
+  const refreshAllData = async () => {
+    setLoading(true);
+    const rows = await getYearSources();
+
+    if (rows.length === 0) {
+      setData(DEFAULT_SARO_DATA);
+      setRaod(DEFAULT_RAOD_DATA);
+      setLoading(false);
+      return;
+    }
+
+    const hasCurrentYear = rows.some((row) => row.year === selectedYear);
+    if (!hasCurrentYear) {
+      const nextYear = rows[0].year;
+      setSelectedYear(nextYear);
+      setSelectedProgram("");
+      setSelectedAllotment("");
+
+      const params = new URLSearchParams(searchParams);
+      params.set("year", nextYear);
+      params.delete("program");
+      params.delete("allotment");
+      setSearchParams(params);
+      return;
+    }
+
+    setLoading(false);
+  };
+
+  const yearOptions: SelectOption[] = yearSources.map((row) => ({
+    value: row.year,
+    label: row.year,
+  }));
+
+  const allotment = [
+    ...new Set(
+      data
+        .slice(1)
+        .filter((row) => !selectedProgram || row[8] === selectedProgram)
+        .map((row) => row[3])
+        .filter(Boolean)
+    )
+  ];
+  const programs = [...new Set(data.slice(1).map((row) => row[8]).filter(Boolean))];
+
+  const programOptions: SelectOption[] = programs.map((program) => ({
     value: program,
     label: program,
   }));
-  const allotmentOptions = allotment.map((allotment) => ({
+  const allotmentOptions: SelectOption[] = allotment.map((allotment) => ({
     value: allotment,
     label: allotment,
   }));
+
+  // If selected allotment doesn't belong to the chosen program, clear it.
+  useEffect(() => {
+    // Wait for sheet data to load before validating URL-provided filter values.
+    if (loading || data.length <= 1) {
+      return;
+    }
+
+    if (selectedAllotment && !allotment.includes(selectedAllotment)) {
+      setSelectedAllotment("");
+      updateFilterParamsInUrl({ allotment: "" });
+    }
+  }, [loading, data, selectedProgram, selectedAllotment, allotment]);
 
   // Update the filtering logic
   const filteredData = data.filter((row, index) => {
@@ -237,10 +499,11 @@ function Records() {
 
   // Add console logs to debug
   useEffect(() => {
+    console.log("Selected Year:", selectedYear);
     console.log("Selected Program:", selectedProgram);
     console.log("Selected Allotment:", selectedAllotment);
     console.log("Filtered Data Length:", filteredData.length);
-  }, [selectedProgram, selectedAllotment, filteredData]);
+  }, [selectedYear, selectedProgram, selectedAllotment, filteredData]);
 
   const totals = filteredData.slice(1).reduce(
     (acc, row: any) => {
@@ -285,8 +548,7 @@ function Records() {
         onClose={() => {
           setSettingsOpen(false);
           setSheetSettings(getSheetSettings());
-          setLoading(true);
-          Promise.all([getData(), getDataRAOD()]).finally(() => setLoading(false));
+          void refreshAllData();
         }}
       />
 
@@ -317,7 +579,11 @@ function Records() {
           <div className="animate-pulse">
             {/* Filter skeleton */}
             <div className="rounded-2xl bg-neutral-900/80 border border-neutral-800 p-5 mb-5">
-              <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+              <div className="grid grid-cols-3 lg:grid-cols-2 md:grid-cols-1 gap-4">
+                <div>
+                  <div className="h-3 w-20 bg-neutral-800 rounded mb-2" />
+                  <div className="h-11 bg-neutral-800 rounded-lg" />
+                </div>
                 <div>
                   <div className="h-3 w-20 bg-neutral-800 rounded mb-2" />
                   <div className="h-11 bg-neutral-800 rounded-lg" />
@@ -386,14 +652,28 @@ function Records() {
          
           
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-1 gap-4 md:gap-3">
+          <div className="grid grid-cols-3 lg:grid-cols-2 md:grid-cols-1 gap-4 md:gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Year</label>
+              <Select
+                id="year"
+                name="year"
+                options={yearOptions}
+                value={yearOptions.find((option) => option.value === selectedYear) || null}
+                onChange={handleYearChange}
+                isClearable={false}
+                placeholder="Choose year..."
+                styles={selectStyles}
+                menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
+              />
+            </div>
             <div>
               <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Program</label>
               <Select
                 id="program"
                 name="program"
                 options={programOptions}
-                value={programOptions.find((option) => option.value === selectedProgram)}
+                value={programOptions.find((option) => option.value === selectedProgram) || null}
                 onChange={handleProgramChange}
                 isClearable
                 placeholder="Choose program..."
@@ -407,7 +687,7 @@ function Records() {
                 id="allotment"
                 name="allotment"
                 options={allotmentOptions}
-                value={allotmentOptions.find((option) => option.value === selectedAllotment)}
+                value={allotmentOptions.find((option) => option.value === selectedAllotment) || null}
                 onChange={handleAllotmentChange}
                 isClearable
                 placeholder="Choose allotment..."
@@ -513,7 +793,7 @@ function Records() {
                 </div>
                 <div className="text-center">
                   <p className="text-neutral-400 text-sm font-medium">No records found</p>
-                  <p className="text-neutral-600 text-xs mt-1">Select a Program or Allotment to view data</p>
+                  <p className="text-neutral-600 text-xs mt-1">Try changing the selected year, program, or allotment</p>
                 </div>
               </div>
             ) : (
