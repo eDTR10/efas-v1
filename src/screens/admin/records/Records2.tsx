@@ -881,7 +881,7 @@ function Records() {
                             <td colSpan={10} className="px-4 py-4 bg-neutral-950/70">
                               <div className="rounded-2xl border border-neutral-800 overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
 
-                                {/* Header */}
+                                {/* Header badingdong*/}
                                 <div className="px-5 py-3.5 bg-black/70 border-b border-neutral-800 flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-2.5">
                                     <div className="w-6 h-6 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center">
