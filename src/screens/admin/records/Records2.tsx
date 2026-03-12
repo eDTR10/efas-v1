@@ -112,7 +112,7 @@ const sanitizeSheetName = (sheetName: string) => {
   return `'${sheetName.replace(/'/g, "''")}'`;
 };
 
-const resolveSheetSourceFromUrl = async (sheetUrl: string): Promise<ResolvedSheetSource | null> => {
+const resolveSheetSourceFromUrl = async (sheetUrl: string, expectedYear?: string): Promise<ResolvedSheetSource | null> => {
   const spreadsheetId = parseSpreadsheetId(sheetUrl);
   if (!spreadsheetId) return null;
 
@@ -120,13 +120,25 @@ const resolveSheetSourceFromUrl = async (sheetUrl: string): Promise<ResolvedShee
     const sheets = await getSheetMetadata(spreadsheetId);
     const gid = parseGidFromUrl(sheetUrl);
     const sheetList = Array.isArray(sheets) ? sheets : [];
-    const matchedSheet = typeof gid === "number"
-      ? sheetList.find((sheet: any) => sheet?.properties?.sheetId === gid)
-      : null;
-    const fallbackSheet = sheetList[0];
-    const sheetTitle: string | undefined = matchedSheet?.properties?.title || fallbackSheet?.properties?.title;
-    const range = sheetTitle
-      ? `${sanitizeSheetName(sheetTitle)}!${DEFAULT_TABLE_RANGE}`
+
+    let targetTitle: string | undefined;
+    if (expectedYear) {
+      const yearSheet = sheetList.find((sheet: any) => sheet?.properties?.title === expectedYear);
+      if (yearSheet) {
+        targetTitle = yearSheet.properties.title;
+      }
+    }
+
+    if (!targetTitle) {
+      const matchedSheet = typeof gid === "number"
+        ? sheetList.find((sheet: any) => sheet?.properties?.sheetId === gid)
+        : null;
+      const fallbackSheet = sheetList[0];
+      targetTitle = matchedSheet?.properties?.title || fallbackSheet?.properties?.title;
+    }
+
+    const range = targetTitle
+      ? `${sanitizeSheetName(targetTitle)}!${DEFAULT_TABLE_RANGE}`
       : DEFAULT_TABLE_RANGE;
 
     return {
@@ -405,8 +417,8 @@ function Records() {
     const loadYearData = async () => {
       try {
         const [saroSource, raodSource] = await Promise.all([
-          resolveSheetSourceFromUrl(selectedSource.saroUrl),
-          resolveSheetSourceFromUrl(selectedSource.raodUrl),
+          resolveSheetSourceFromUrl(selectedSource.saroUrl, selectedYear),
+          resolveSheetSourceFromUrl(selectedSource.raodUrl, selectedYear),
         ]);
 
         const [saroValues, raodValues] = await Promise.all([
@@ -481,7 +493,7 @@ function Records() {
         .filter(Boolean)
     )
   ];
-  const programs = [...new Set(data.slice(1).map((row) => row[8]).filter(Boolean))];
+  const programs = [...new Set(data.slice(1).map((row) => row[8]).filter(Boolean))].sort((a: any, b: any) => String(a).localeCompare(String(b)));
 
   const programOptions: SelectOption[] = programs.map((program) => ({
     value: program,
