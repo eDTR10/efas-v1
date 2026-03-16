@@ -251,6 +251,46 @@ const selectStyles = {
   }),
 };
 
+const MONTH_OPTIONS: SelectOption[] = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
+
+/**
+ * Extract the month (1-12) from a date string.
+ * Handles formats like "1/15/2026", "01/15/2026", "January 15, 2026", "2026-01-15", etc.
+ */
+const getMonthFromDateStr = (dateStr: string): number | null => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+
+  // Try parsing as a Date
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.getMonth() + 1; // 1-indexed
+  }
+
+  // Fallback: try to extract month from M/D/YYYY or MM/DD/YYYY
+  const slashMatch = trimmed.match(/^(\d{1,2})[\/\-]/);
+  if (slashMatch) {
+    const m = parseInt(slashMatch[1], 10);
+    if (m >= 1 && m <= 12) return m;
+  }
+
+  return null;
+};
+
 function Records() {
   const navigate = useNavigate();
 
@@ -266,9 +306,16 @@ function Records() {
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMonthFrom, setSelectedMonthFrom] = useState("");
+  const [selectedMonthTo, setSelectedMonthTo] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
 
+
+  const isYearGte2026 = (() => {
+    const yearNum = parseInt(selectedYear, 10);
+    return !isNaN(yearNum) && yearNum >= 2026;
+  })();
 
   const updateFilterParamsInUrl = (updates: Partial<Record<"program" | "allotment", string>>) => {
     const params = new URLSearchParams(window.location.search);
@@ -305,6 +352,8 @@ function Records() {
     setSelectedProgram("");
     setSelectedAllotment("");
     setSelectedRow(null);
+    setSelectedMonthFrom("");
+    setSelectedMonthTo("");
 
     const params = new URLSearchParams(searchParams);
     if (newValue) {
@@ -316,6 +365,30 @@ function Records() {
     params.delete("allotment");
     setSearchParams(params);
   };
+
+  const handleMonthFromChange = (selectedOption: SelectOption | null) => {
+    const newValue = selectedOption ? selectedOption.value : "";
+    setSelectedMonthFrom(newValue);
+    // If "To" is before "From", reset "To"
+    if (newValue && selectedMonthTo && parseInt(selectedMonthTo) < parseInt(newValue)) {
+      setSelectedMonthTo("");
+    }
+  };
+
+  const handleMonthToChange = (selectedOption: SelectOption | null) => {
+    const newValue = selectedOption ? selectedOption.value : "";
+    setSelectedMonthTo(newValue);
+    // If "From" is after "To", reset "From"
+    if (newValue && selectedMonthFrom && parseInt(selectedMonthFrom) > parseInt(newValue)) {
+      setSelectedMonthFrom("");
+    }
+  };
+
+  // Available month options based on current selection
+  const monthFromOptions = MONTH_OPTIONS;
+  const monthToOptions = selectedMonthFrom
+    ? MONTH_OPTIONS.filter(opt => parseInt(opt.value) >= parseInt(selectedMonthFrom))
+    : MONTH_OPTIONS;
 
   const handleProgramChange = (selectedOption: SelectOption | null) => {
     const newValue = selectedOption ? selectedOption.value : "";
@@ -546,6 +619,18 @@ function Records() {
     console.log("Filtered Data Length:", filteredData.length);
   }, [selectedYear, selectedProgram, selectedAllotment, filteredData]);
 
+  // Helper: check if a RAOD row falls within the selected month range
+  const isRaodInMonthRange = (raodRow: any) => {
+    if (!isYearGte2026 || (!selectedMonthFrom && !selectedMonthTo)) return true;
+    const indices = getRaodIndices(selectedYear);
+    const dateStr = raodRow[indices.dateObligation];
+    const month = getMonthFromDateStr(dateStr);
+    if (month === null) return true; // Can't parse → include by default
+    const from = selectedMonthFrom ? parseInt(selectedMonthFrom) : 1;
+    const to = selectedMonthTo ? parseInt(selectedMonthTo) : 12;
+    return month >= from && month <= to;
+  };
+
   const totals = filteredData.slice(1).reduce(
     (acc, row: any) => {
       const indices = getRaodIndices(selectedYear);
@@ -555,7 +640,8 @@ function Records() {
         .filter(
           (raodRow) =>
             raodRow[indices.saroNo] === row[3] &&
-            raodRow[indices.objectCode] === row[11]
+            raodRow[indices.objectCode] === row[11] &&
+            isRaodInMonthRange(raodRow)
         );
 
       console.log("Calculating totals for row:", row);
@@ -737,15 +823,39 @@ function Records() {
                 menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
               />
             </div>
-            {/* <button
-              onClick={() => setSettingsOpen(true)}
-              className="ml-auto flex items-center gap-1.5 text-green-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 border border-neutral-700 hover:border-green-500/40 transition-all duration-200 text-xs font-medium"
-            >
-              <Settings size={13} />
-              Settings
-            </button> */}
-
-
+            {/* Month Range Filter - only for years >= 2026 */}
+            {isYearGte2026 && (
+              <div className="grid grid-cols-2 gap-4 md:gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Month From</label>
+                  <Select
+                    id="month-from"
+                    name="month-from"
+                    options={monthFromOptions}
+                    value={MONTH_OPTIONS.find((opt) => opt.value === selectedMonthFrom) || null}
+                    onChange={handleMonthFromChange}
+                    isClearable
+                    placeholder="Start month..."
+                    styles={selectStyles}
+                    menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-green-400/80 mb-1.5 uppercase tracking-wider">Month To</label>
+                  <Select
+                    id="month-to"
+                    name="month-to"
+                    options={monthToOptions}
+                    value={MONTH_OPTIONS.find((opt) => opt.value === selectedMonthTo) || null}
+                    onChange={handleMonthToChange}
+                    isClearable
+                    placeholder="End month..."
+                    styles={selectStyles}
+                    menuPortalTarget={typeof window !== 'undefined' ? window.document.body : null}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -868,7 +978,7 @@ function Records() {
                     const indices = getRaodIndices(selectedYear);
                     const matchingRaods: any[] = raod
                       .slice(1)
-                      .filter((raodRow) => raodRow[indices.saroNo] === row[3] && raodRow[indices.objectCode] === row[11]);
+                      .filter((raodRow) => raodRow[indices.saroNo] === row[3] && raodRow[indices.objectCode] === row[11] && isRaodInMonthRange(raodRow));
 
                     const totalObligation = matchingRaods.reduce((sum, raodRow) => {
                       return sum + (raodRow[indices.obligatedAmount] ? parseAmount(raodRow[indices.obligatedAmount]) : 0);
