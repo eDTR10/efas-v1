@@ -90,6 +90,16 @@ const NTCABalanceMainContainer: React.FC = () => {
     const [activeQuarter, setActiveQuarter] = useState<ActiveQuarter>('all');
     const [activeBudgetCategory, setActiveBudgetCategory] = useState<ActiveBudgetCategory>('regular');
     const [activeYear, setActiveYear] = useState<NTCAYear>('2026');
+    const [activePAP, setActivePAP] = useState<string>('');
+
+    // Compute PAP options from rows (headers only, unique)
+    const papOptions = useMemo(() => {
+        const set = new Set<string>();
+        for (const row of rows) {
+            if (row.isHeader && row.pap) set.add(row.pap);
+        }
+        return Array.from(set);
+    }, [rows]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -122,8 +132,9 @@ const NTCABalanceMainContainer: React.FC = () => {
         for (const row of rows) {
             if (row.isHeader) {
                 const isAllowed = allowedKeys.has(normalizeTitle(row.pap));
-                currentAllowed = isAllowed;
-                if (isAllowed) selected.push(row);
+                const papMatches = !activePAP || row.pap === activePAP;
+                currentAllowed = isAllowed && papMatches;
+                if (currentAllowed) selected.push(row);
                 continue;
             }
 
@@ -133,7 +144,7 @@ const NTCABalanceMainContainer: React.FC = () => {
         }
 
         return selected;
-    }, [rows, activeBudgetCategory]);
+    }, [rows, activeBudgetCategory, activePAP]);
 
     const grandTotals = useMemo(() => {
         const dataRows = filteredRows.filter((row) => !row.isHeader);
@@ -187,6 +198,8 @@ const NTCABalanceMainContainer: React.FC = () => {
                             activeSection={activeSection}
                             activeQuarter={activeQuarter}
                             activeBudgetCategory={activeBudgetCategory}
+                            activePAP={activePAP}
+                            papOptions={papOptions}
                             lastUpdated={lastUpdated}
                             loading={loading}
                             onRefresh={loadData}
@@ -194,6 +207,7 @@ const NTCABalanceMainContainer: React.FC = () => {
                             onSectionChange={setActiveSection}
                             onQuarterChange={setActiveQuarter}
                             onBudgetCategoryChange={setActiveBudgetCategory}
+                            onPAPChange={setActivePAP}
                         />
                     </div>
                 </div>

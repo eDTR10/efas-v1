@@ -93,6 +93,35 @@ const SectionHeaderRow: React.FC<{
     </tr>
 );
 
+// ─── PAP Total Row ────────────────────────────────────────────────────────────
+const PAPTotalRow: React.FC<{
+    dataRows: NTCARow[];
+    visibleSections: typeof SECTION_META;
+    visibleQuarters: QuarterKey[];
+}> = ({ dataRows, visibleSections, visibleQuarters }) => (
+    <tr className="bg-green-900/50 border-b-2 border-green-600/40">
+        <td className="sticky left-0 z-10 bg-green-900/80 px-4 py-2 text-green-200 font-black text-[10px] uppercase tracking-[0.25em] border-r border-green-700/40 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+            Total
+        </td>
+        <td className="px-3 py-2 border-r border-green-700/30" />
+        <td className="px-3 py-2 border-r border-green-700/30" />
+        <td className="px-3 py-2 border-r border-green-700/30" />
+        {visibleSections.map((sm) =>
+            visibleQuarters.map((q) => {
+                const val = dataRows.reduce((sum, r) => sum + ((r[sm.key] as QuarterData)[q] ?? 0), 0);
+                return (
+                    <td
+                        key={`pap-total-${sm.key}-${q}`}
+                        className={`px-3 py-2 text-right font-black font-mono text-[11px] border-r border-green-700/30 ${sm.text} ${q === 'total' ? 'bg-white/10' : ''} ${val < 0 ? 'text-rose-400' : ''}`}
+                    >
+                        {formatAmount(val)}
+                    </td>
+                );
+            })
+        )}
+    </tr>
+);
+
 // ─── Data Row ─────────────────────────────────────────────────────────────────
 const DataRow: React.FC<{
     row: NTCARow;
@@ -254,30 +283,69 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
 
     const totalCols = 4 + visibleSections.length * visibleQuarters.length;
 
-    // Group consecutive data rows by pap
-    const groupedRows: Array<{ id: string; groupKey: string; sectionId: string; rows: NTCARow[] }> = [];
-    let currentGroup: { id: string; groupKey: string; sectionId: string; rows: NTCARow[] } | null = null;
-    let currentSectionId = 'section-ungrouped';
+    // Group consecutive data rows by pap (handled below with papGroups)
     let groupCounter = 0;
+
+    // For each PAP header, collect its data rows for totals
+    const papGroups: Array<{
+        id: string;
+        groupKey: string;
+        sectionId: string;
+        rows: NTCARow[];
+        header: NTCARow;
+        dataRows: NTCARow[];
+    }> = [];
+    let lastHeader: NTCARow | null = null;
+    let lastHeaderId = '';
+    let dataRowsForHeader: NTCARow[] = [];
+    groupCounter = 0;
     for (const row of filteredTableRows) {
         if (row.isHeader) {
-            if (currentGroup) {
-                groupedRows.push(currentGroup);
-                currentGroup = null;
+            if (lastHeader) {
+                papGroups.push({
+                    id: lastHeaderId,
+                    groupKey: `header-${lastHeader.pap}`,
+                    sectionId: lastHeaderId,
+                    rows: [lastHeader],
+                    header: lastHeader,
+                    dataRows: dataRowsForHeader,
+                });
             }
-            currentSectionId = `header-${row.id}-${groupCounter++}`;
-            groupedRows.push({ id: currentSectionId, groupKey: `header-${row.pap}`, sectionId: currentSectionId, rows: [row] });
+            lastHeader = row;
+            lastHeaderId = `header-${row.id}-${groupCounter++}`;
+            dataRowsForHeader = [];
         } else {
+            dataRowsForHeader.push(row);
+        }
+    }
+    if (lastHeader) {
+        papGroups.push({
+            id: lastHeaderId,
+            groupKey: `header-${lastHeader.pap}`,
+            sectionId: lastHeaderId,
+            rows: [lastHeader],
+            header: lastHeader,
+            dataRows: dataRowsForHeader,
+        });
+    }
+
+    // Now, build groupedRows for rendering (header, then group for each data row group)
+    const groupedRows: Array<{ id: string; groupKey: string; sectionId: string; rows: NTCARow[]; header?: NTCARow; dataRows?: NTCARow[] }> = [];
+    for (const group of papGroups) {
+        groupedRows.push({ ...group });
+        // ...existing code for data row grouping...
+        let currentGroup: { id: string; groupKey: string; sectionId: string; rows: NTCARow[] } | null = null;
+        for (const row of group.dataRows) {
             const papKey = row.pap || row.papCode || row.id;
             if (!currentGroup || currentGroup.groupKey !== papKey) {
                 if (currentGroup) groupedRows.push(currentGroup);
-                currentGroup = { id: `group-${groupCounter++}`, groupKey: papKey, sectionId: currentSectionId, rows: [row] };
+                currentGroup = { id: `group-${group.id}-${papKey}`, groupKey: papKey, sectionId: group.id, rows: [row] };
             } else {
                 currentGroup.rows.push(row);
             }
         }
+        if (currentGroup) groupedRows.push(currentGroup);
     }
-    if (currentGroup) groupedRows.push(currentGroup);
 
     const hasVisibleData = filteredTableRows.some((row) => !row.isHeader);
 
@@ -365,24 +433,40 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                                         No matching records found.
                                     </td>
                                 </tr>
-                            ) : groupedRows.map((group) => {
+                            ) : groupedRows.map((group: any) => {
                                 // Section header rows
                                 if (group.groupKey.startsWith('header-')) {
-                                    const row = group.rows[0];
+                                    const row = group.header;
                                     const isSectionExpanded = expandedSections[group.id] ?? false;
+                                    // Calculate totals for this PAP respecting active quarter
+                                    const sumQ = (data: QuarterData | undefined): number => {
+                                        if (!data) return 0;
+                                        if (activeQuarter === 'all') return (data.q1 ?? 0) + (data.q2 ?? 0) + (data.q3 ?? 0) + (data.q4 ?? 0);
+                                        return data[activeQuarter as keyof QuarterData] ?? 0;
+                                    };
+                                    const ntcaTotal = group.dataRows.reduce((sum: number, r: NTCARow) => sum + sumQ(r.ntcaReceived), 0);
+                                    const disbTotal = group.dataRows.reduce((sum: number, r: NTCARow) => sum + sumQ(r.disbursements), 0);
+                                    const balanceTotal = group.dataRows.reduce((sum: number, r: NTCARow) => sum + sumQ(r.ntcaBalance), 0);
+                                    void ntcaTotal; void disbTotal; void balanceTotal;
                                     return (
-                                        <SectionHeaderRow
-                                            key={group.id}
-                                            label={row.pap}
-                                            colSpan={totalCols}
-                                            isExpanded={isSectionExpanded}
-                                            onToggle={() =>
-                                                setExpandedSections((prev) => ({
-                                                    ...prev,
-                                                    [group.id]: !(prev[group.id] ?? false),
-                                                }))
-                                            }
-                                        />
+                                        <React.Fragment key={group.id}>
+                                            <SectionHeaderRow
+                                                label={row.pap}
+                                                colSpan={totalCols}
+                                                isExpanded={isSectionExpanded}
+                                                onToggle={() =>
+                                                    setExpandedSections((prev) => ({
+                                                        ...prev,
+                                                        [group.id]: !(prev[group.id] ?? false),
+                                                    }))
+                                                }
+                                            />
+                                            <PAPTotalRow
+                                                dataRows={group.dataRows}
+                                                visibleSections={visibleSections}
+                                                visibleQuarters={visibleQuarters}
+                                            />
+                                        </React.Fragment>
                                     );
                                 }
 
@@ -419,7 +503,7 @@ const NTCATable: React.FC<NTCATableProps> = ({ rows, activeSection, activeQuarte
                                             </td>
                                         </tr>
                                         {/* Show no rows if collapsed, all rows if expanded */}
-                                        {(isExpanded ? group.rows : []).map((row) => (
+                                        {(isExpanded ? group.rows : []).map((row: any) => (
                                             <DataRow
                                                 key={row.id}
                                                 row={row}

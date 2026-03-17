@@ -15,6 +15,7 @@ interface NTCARequestTableProps {
 
 const NTCARequestTable: React.FC<NTCARequestTableProps> = ({ rows }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedProject, setSelectedProject] = useState('');
     const [isDragging, setIsDragging] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const dragStateRef = useRef({
@@ -23,13 +24,23 @@ const NTCARequestTable: React.FC<NTCARequestTableProps> = ({ rows }) => {
         startScrollLeft: 0,
     });
 
+    const projectOptions = useMemo(() => {
+        const seen = new Set<string>();
+        return rows
+            .map((row) => row.project)
+            .filter((p) => {
+                if (!p || seen.has(p)) return false;
+                seen.add(p);
+                return true;
+            });
+    }, [rows]);
+
     const filteredRows = useMemo(() => {
         const normalized = searchTerm.trim().toLowerCase();
-        if (!normalized) {
-            return rows;
-        }
 
         return rows.filter((row) => {
+            if (selectedProject && row.project !== selectedProject) return false;
+            if (!normalized) return true;
             const baseFields = [
                 row.project,
                 row.activity,
@@ -47,7 +58,7 @@ const NTCARequestTable: React.FC<NTCARequestTableProps> = ({ rows }) => {
                 .filter(Boolean)
                 .some((value) => value.toLowerCase().includes(normalized));
         });
-    }, [rows, searchTerm]);
+    }, [rows, searchTerm, selectedProject]);
 
     const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
         if (event.pointerType === 'mouse' && event.button !== 0) {
@@ -96,15 +107,27 @@ const NTCARequestTable: React.FC<NTCARequestTableProps> = ({ rows }) => {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:justify-between">
-                <div className="relative max-w-xl w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-sky-400/60" />
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Search by project, activity, SARO, target date, or month amounts..."
-                        className="w-full rounded-xl border border-sky-700/40 bg-sky-950/30 pl-9 pr-3 py-2 text-xs text-sky-50 placeholder:text-sky-300/45 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-                    />
+                <div className="flex flex-col-4 sm:flex-row gap-2 w-full lg:max-w-2xl">
+                    <div className="relative flex-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-sky-400/60" />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                            placeholder="Search by project, activity, SARO, target date, or month amounts..."
+                            className="w-full rounded-xl border border-sky-700/40 bg-sky-950/30 pl-9 pr-3 py-2 text-xs text-sky-50 placeholder:text-sky-300/45 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                        />
+                    </div>
+                    <select
+                        value={selectedProject}
+                        onChange={(event) => setSelectedProject(event.target.value)}
+                        className="rounded-xl border border-sky-700/40 bg-neutral-900 px-3 py-2 text-xs text-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500/40 min-w-[160px]"
+                    >
+                        <option value="">All Projects</option>
+                        {projectOptions.map((project) => (
+                            <option key={project} value={project}>{project}</option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-neutral-400">

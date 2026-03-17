@@ -6,6 +6,8 @@ interface TableFiltersProps {
     activeSection: ActiveSection | 'all';
     activeQuarter: ActiveQuarter;
     activeBudgetCategory: ActiveBudgetCategory;
+    activePAP: string;
+    papOptions: string[];
     lastUpdated: Date | null;
     loading: boolean;
     onRefresh: () => void;
@@ -13,6 +15,7 @@ interface TableFiltersProps {
     onSectionChange: (s: ActiveSection | 'all') => void;
     onQuarterChange: (q: ActiveQuarter) => void;
     onBudgetCategoryChange: (c: ActiveBudgetCategory) => void;
+    onPAPChange: (p: string) => void;
 }
 
 const QUARTERS: { key: ActiveQuarter; label: string }[] = [
@@ -28,6 +31,8 @@ const TableFilters: React.FC<TableFiltersProps> = ({
     activeSection,
     activeQuarter,
     activeBudgetCategory,
+    activePAP,
+    papOptions,
     lastUpdated,
     loading,
     onRefresh,
@@ -35,6 +40,7 @@ const TableFilters: React.FC<TableFiltersProps> = ({
     onSectionChange,
     onQuarterChange,
     onBudgetCategoryChange,
+    onPAPChange,
 }) => {
     return (
         <div className="w-max min-w-full flex items-center gap-3">
@@ -66,6 +72,24 @@ const TableFilters: React.FC<TableFiltersProps> = ({
                 >
                     <option value="regular">Regular</option>
                     <option value="special">Special</option>
+                </select>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:block w-px bg-green-700/30 self-stretch" />
+
+            {/* ── PAP filter ─────────────────────────────────────────────────── */}
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-green-500/50 text-xs uppercase tracking-widest mr-1">PAP:</span>
+                <select
+                    value={activePAP}
+                    onChange={(e) => onPAPChange(e.target.value)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-green-900/50 text-green-300 border border-green-700/40 hover:bg-green-800/60 focus:outline-none focus:ring-2 focus:ring-green-500/40"
+                >
+                    <option value="">All PAPs</option>
+                    {papOptions.map((pap) => (
+                        <option key={pap} value={pap}>{pap}</option>
+                    ))}
                 </select>
             </div>
 

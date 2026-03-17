@@ -191,7 +191,7 @@ const NTCARequestMainContainer: React.FC = () => {
                 </div>
 
                 {!loading && !error && (
-                    <div className="grid grid-cols-4 sm:grid-cols-1 gap-3 mb-5">
+                    <div className="grid grid-cols-3 sm:grid-cols-1 gap-3 mb-5">
                         <div className="rounded-2xl border border-sky-500/30 bg-sky-950/30 backdrop-blur-md p-4">
                             <p className="text-[10px] uppercase tracking-widest text-sky-300/70">Total Requested</p>
                             <p className="mt-1 text-lg font-bold text-sky-100">₱ {formatPeso(totals.requested)}</p>
@@ -204,10 +204,10 @@ const NTCARequestMainContainer: React.FC = () => {
                             <p className="text-[10px] uppercase tracking-widest text-amber-300/70">Open Balance</p>
                             <p className="mt-1 text-lg font-bold text-amber-100">₱ {formatPeso(totals.balance)}</p>
                         </div>
-                        <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 backdrop-blur-md p-4 xl:col-span-3">
+                        {/* <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 backdrop-blur-md p-4 xl:col-span-3">
                             <p className="text-[10px] uppercase tracking-widest text-violet-300/70">Rows with Schedule</p>
                             <p className="mt-1 text-lg font-bold text-violet-100">{totals.rowsWithSchedule}</p>
-                        </div>
+                        </div> */}
                     </div>
                 )}
 

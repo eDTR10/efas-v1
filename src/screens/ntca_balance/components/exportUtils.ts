@@ -22,9 +22,41 @@ const buildDataRows = (
     visibleSections: SectionMeta[],
     visibleQuarters: string[]
 ): (string | number)[][] => {
+    // Pre-compute per-header totals for each section × quarter
+    const headerTotals = new Map<string, Record<string, Record<string, number>>>();
+    let currentHeaderId: string | null = null;
+
+    for (const row of rows) {
+        if (row.isHeader) {
+            currentHeaderId = row.id;
+            const sectionMap: Record<string, Record<string, number>> = {};
+            for (const sm of visibleSections) {
+                sectionMap[sm.key] = {};
+                for (const q of visibleQuarters) {
+                    sectionMap[sm.key][q] = 0;
+                }
+            }
+            headerTotals.set(row.id, sectionMap);
+        } else if (currentHeaderId) {
+            const sectionMap = headerTotals.get(currentHeaderId)!;
+            for (const sm of visibleSections) {
+                for (const q of visibleQuarters) {
+                    sectionMap[sm.key][q] += (row[sm.key] as unknown as Record<string, number>)[q] ?? 0;
+                }
+            }
+        }
+    }
+
     return rows.map((row) => {
         if (row.isHeader) {
-            return [row.pap, '', '', '', ...visibleSections.flatMap(() => visibleQuarters.map(() => ''))];
+            const totals = headerTotals.get(row.id);
+            const cells: (string | number)[] = [row.pap, 'TOTALS', '', ''];
+            for (const sm of visibleSections) {
+                for (const q of visibleQuarters) {
+                    cells.push(totals ? (totals[sm.key][q] ?? 0) : 0);
+                }
+            }
+            return cells;
         }
         const cells: (string | number)[] = [row.pap, row.papCode, row.classType, row.saroNo];
         for (const sm of visibleSections) {
