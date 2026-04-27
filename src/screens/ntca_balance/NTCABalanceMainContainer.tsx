@@ -173,10 +173,10 @@ const NTCABalanceMainContainer: React.FC = () => {
     }, [filteredRows, activeQuarter]);
 
     return (
-        <div className="min-h-screen w-full bg-neutral-950 relative overflow-hidden">
+        <div className="min-h-screen w-full bg-background relative overflow-hidden">
             {/* Decorative orbs */}
-            <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-green-500/5 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-green-400/5 blur-3xl pointer-events-none animate-pulse" />
+            <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-primary/5 blur-3xl pointer-events-none animate-pulse" />
 
             {/* Logo
             <div className="relative z-20 flex flex-col items-center pt-8 pb-2">

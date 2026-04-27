@@ -123,33 +123,33 @@ const NTCARequestMainContainer: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-neutral-950 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-[32rem] h-[32rem] rounded-full bg-sky-500/5 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-[26rem] h-[26rem] rounded-full bg-emerald-400/5 blur-3xl pointer-events-none animate-pulse" />
+        <div className="min-h-screen w-full bg-background relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-[32rem] h-[32rem] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-[26rem] h-[26rem] rounded-full bg-primary/5 blur-3xl pointer-events-none animate-pulse" />
 
             <NTCARequestHeader />
 
             <main className="relative z-10 px-4 py-8">
                 <div className="flex flex-col gap-4 mb-6">
-                    <div className="flex flex-col xl:flex-row xl:items-center gap-4 xl:justify-between rounded-2xl border border-sky-500/20 bg-black/30 backdrop-blur-md p-4">
+                    <div className="flex flex-col xl:flex-row xl:items-center gap-4 xl:justify-between rounded-2xl border border-border bg-card/80 backdrop-blur-md p-4">
                         <div>
-                            <p className="text-sky-300/70 text-[11px] uppercase tracking-[0.35em]">Request Schedule</p>
-                            <h2 className="text-white text-2xl font-bold mt-2">NTCA Request Monitoring</h2>
-                            <p className="text-neutral-400 text-sm mt-2 max-w-3xl">
+                            <p className="text-primary/70 text-[11px] uppercase tracking-[0.35em]">Request Schedule</p>
+                            <h2 className="text-foreground text-2xl font-bold mt-2">NTCA Request Monitoring</h2>
+                            <p className="text-muted-foreground text-sm mt-2 max-w-3xl">
                                 Reads from the live Google Sheet and appends new request rows back into the same sheet after Google authorization.
                             </p>
                         </div>
 
                         <div className="grid grid-cols-4 xl:grid-cols-1 m:grid-cols-1 sm:grid-cols-1 gap-3 xl:min-w-[780px]">
                             {lastUpdated && (
-                                <span className="flex items-center justify-center rounded-xl border border-neutral-800 bg-neutral-950/40 px-4 py-2 text-neutral-500 text-xs whitespace-nowrap">
+                                <span className="flex items-center justify-center rounded-xl border border-border bg-muted/40 px-4 py-2 text-muted-foreground text-xs whitespace-nowrap">
                                     Updated {lastUpdated.toLocaleTimeString()}
                                 </span>
                             )}
                             <button
                                 onClick={() => loadData()}
                                 disabled={loading}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-sky-200 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-4 py-2 text-sm font-medium text-primary hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -192,17 +192,17 @@ const NTCARequestMainContainer: React.FC = () => {
 
                 {!loading && !error && (
                     <div className="grid grid-cols-3 sm:grid-cols-1 gap-3 mb-5">
-                        <div className="rounded-2xl border border-sky-500/30 bg-sky-950/30 backdrop-blur-md p-4">
-                            <p className="text-[10px] uppercase tracking-widest text-sky-300/70">Total Requested</p>
-                            <p className="mt-1 text-lg font-bold text-sky-100">₱ {formatPeso(totals.requested)}</p>
+                        <div className="rounded-2xl border border-border bg-card backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-primary/70">Total Requested</p>
+                            <p className="mt-1 text-lg font-bold text-foreground">₱ {formatPeso(totals.requested)}</p>
                         </div>
-                        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 backdrop-blur-md p-4">
-                            <p className="text-[10px] uppercase tracking-widest text-emerald-300/70">Total Obligated</p>
-                            <p className="mt-1 text-lg font-bold text-emerald-100">₱ {formatPeso(totals.obligated)}</p>
+                        <div className="rounded-2xl border border-border bg-card backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-primary/70">Total Obligated</p>
+                            <p className="mt-1 text-lg font-bold text-foreground">₱ {formatPeso(totals.obligated)}</p>
                         </div>
-                        <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 backdrop-blur-md p-4">
-                            <p className="text-[10px] uppercase tracking-widest text-amber-300/70">Open Balance</p>
-                            <p className="mt-1 text-lg font-bold text-amber-100">₱ {formatPeso(totals.balance)}</p>
+                        <div className="rounded-2xl border border-border bg-card backdrop-blur-md p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Open Balance</p>
+                            <p className="mt-1 text-lg font-bold text-foreground">₱ {formatPeso(totals.balance)}</p>
                         </div>
                         {/* <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 backdrop-blur-md p-4 xl:col-span-3">
                             <p className="text-[10px] uppercase tracking-widest text-violet-300/70">Rows with Schedule</p>
@@ -213,14 +213,14 @@ const NTCARequestMainContainer: React.FC = () => {
 
                 {!loading && !error && allRows.length > 0 && (
                     <div className="mb-4 flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-sky-300 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                             {allRows.length} records in view
                         </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-muted-foreground text-xs font-medium">
                             {accessToken ? 'Google connected for read/write' : 'Connect Google for read/write'}
                         </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs font-medium">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-muted-foreground text-xs font-medium">
                             Sheet: {NTCA_REQUEST_SHEET_INFO.name}
                         </span>
                     </div>

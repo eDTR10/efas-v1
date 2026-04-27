@@ -67,46 +67,46 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.7)] p-6 w-full max-w-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-5 rounded-full bg-green-500" />
-            <h2 className="text-white font-bold text-base tracking-tight">Google Sheets Configuration</h2>
+            <div className="w-1.5 h-5 rounded-full bg-primary" />
+            <h2 className="text-foreground font-bold text-base tracking-tight">Google Sheets Configuration</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-neutral-500 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
+            className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors"
           >
             <X size={18} />
           </button>
         </div>
-        <p className="text-xs text-red-400/80 italic mb-6 pl-3.5">*Invite ian.caulin@dict.gov.ph to your sheet if it doesn't work on eFAS</p>
+        <p className="text-xs text-destructive/80 italic mb-6 pl-3.5">*Invite ian.caulin@dict.gov.ph to your sheet if it doesn't work on eFAS</p>
 
         <div className="space-y-5">
           {/* MDS Regular R10 Settings */}
-          <div className="border-l-2 border-blue-500/60 pl-4">
-            <h3 className="text-sm font-semibold text-blue-400 mb-3 uppercase tracking-wider">MDS Regular R10 — Main Data</h3>
+          <div className="border-l-2 border-primary/60 pl-4">
+            <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">MDS Regular R10 — Main Data</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Spreadsheet ID</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Spreadsheet ID</label>
                 <input
                   type="text"
                   value={settings.mdsRegR10Id}
                   onChange={(e) => handleChange("mdsRegR10Id", e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
                   placeholder="Enter Google Sheet ID"
                 />
-                <p className="text-[11px] text-neutral-600 mt-1">Found in the URL: docs.google.com/spreadsheets/d/<span className="font-mono text-neutral-500">YOUR_ID_HERE</span></p>
+                <p className="text-[11px] text-muted-foreground mt-1">Found in the URL: docs.google.com/spreadsheets/d/<span className="font-mono">YOUR_ID_HERE</span></p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Sheet Name</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Sheet Name</label>
                 <input
                   type="text"
                   value={settings.mdsRegR10Sheet}
                   onChange={(e) => handleChange("mdsRegR10Sheet", e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
                   placeholder="e.g., MDS Regular R10"
                 />
               </div>
@@ -114,27 +114,27 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
           </div>
 
           {/* RAOD Settings */}
-          <div className="border-l-2 border-green-500/60 pl-4">
-            <h3 className="text-sm font-semibold text-green-400 mb-3 uppercase tracking-wider">RAOD — Obligations Data</h3>
+          <div className="border-l-2 border-primary/40 pl-4">
+            <h3 className="text-sm font-semibold text-primary/80 mb-3 uppercase tracking-wider">RAOD — Obligations Data</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Spreadsheet ID</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Spreadsheet ID</label>
                 <input
                   type="text"
                   value={settings.raod2024Id}
                   onChange={(e) => handleChange("raod2024Id", e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-colors"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
                   placeholder="Enter Google Sheet ID"
                 />
-                <p className="text-[11px] text-neutral-600 mt-1">Found in the URL: docs.google.com/spreadsheets/d/<span className="font-mono text-neutral-500">YOUR_ID_HERE</span></p>
+                <p className="text-[11px] text-muted-foreground mt-1">Found in the URL: docs.google.com/spreadsheets/d/<span className="font-mono">YOUR_ID_HERE</span></p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Sheet Name</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Sheet Name</label>
                 <input
                   type="text"
                   value={settings.raod2024Sheet}
                   onChange={(e) => handleChange("raod2024Sheet", e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-colors"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
                   placeholder="e.g., 2025"
                 />
               </div>
@@ -144,7 +144,7 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
 
         {/* Success Message */}
         {saved && (
-          <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-xl">
+          <div className="mt-4 p-3 bg-primary/10 border border-primary/30 text-primary text-sm rounded-xl">
             Settings saved! Copy the URL to share these settings with others.
           </div>
         )}
@@ -153,19 +153,19 @@ const SheetSettingsModal: React.FC<SheetSettingsModalProps> = ({
         <div className="flex gap-3 mt-6">
           <button
             onClick={handleSave}
-            className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-colors"
+            className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-colors"
           >
             Save Settings
           </button>
           <button
             onClick={handleReset}
-            className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium py-2 px-4 rounded-xl text-sm border border-neutral-700 transition-colors"
+            className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground font-medium py-2 px-4 rounded-xl text-sm border border-border transition-colors"
           >
             Reset to Default
           </button>
           <button
             onClick={onClose}
-            className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-medium py-2 px-4 rounded-xl text-sm border border-neutral-700 transition-colors"
+            className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground font-medium py-2 px-4 rounded-xl text-sm border border-border transition-colors"
           >
             Close
           </button>

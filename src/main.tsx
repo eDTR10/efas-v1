@@ -9,6 +9,18 @@ import NotFound from "./screens/notFound";
 import Loader from './components/loader/loader.tsx';
 import App from './screens/admin/App.tsx';
 
+// ── New eFAS System ───────────────────────────────────────────────────────────
+import LoginPage from "./screens/auth/LoginPage";
+import AppLayout from "./screens/dashboard/AppLayout";
+import Dashboard from "./screens/dashboard/Dashboard";
+import SubARO from "./screens/dashboard/SubARO";
+import { DisbursementPage, AuditTrailPage } from "./screens/dashboard/StubPages";
+import RaodMainContainer from './screens/saro/RaodMainContainer';
+import ReceivedSaroMainContainer from './screens/received_saro/ReceivedSaroMainContainer';
+import EfasSettingsContainer from "./screens/settings/EfasSettingsContainer";
+import NTCAMainContainer from "./screens/ntca_records/NTCAMainContainer";
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 const Menu = lazy(() =>
   wait(1300).then(() => import("./screens/admin/menu/MenuContainer.tsx"))
@@ -52,11 +64,58 @@ const AddRecord = lazy(() =>
 );
 
 const router = createBrowserRouter([
+  // ── eFAS System Routes ──────────────────────────────────────────────────────
   {
-
-    path: "/efas-v1/",
-    element: <Navigate to="/efas-v1/portal" />,
+    path: "/efas-v1/login",
+    element: <LoginPage />,
   },
+  {
+    path: "/efas-v1/",
+    element: <Navigate to="/efas-v1/login" />,
+  },
+  {
+    path: "/efas-v1/dashboard",
+    element: <AppLayout />,
+    children: [
+      { index: true, element: <Dashboard /> },
+    ],
+  },
+  {
+    path: "/efas-v1/received-saro",
+    element: <AppLayout />,
+    children: [{ index: true, element: <ReceivedSaroMainContainer /> }],
+  },
+  {
+    path: "/efas-v1/saro",
+    element: <AppLayout />,
+    children: [{ index: true, element: <RaodMainContainer /> }],
+  },
+  {
+    path: "/efas-v1/sub-aro",
+    element: <AppLayout />,
+    children: [{ index: true, element: <SubARO /> }],
+  },
+  {
+    path: "/efas-v1/ntca",
+    element: <AppLayout />,
+    children: [{ index: true, element: <NTCAMainContainer /> }],
+  },
+  {
+    path: "/efas-v1/disbursement",
+    element: <AppLayout />,
+    children: [{ index: true, element: <DisbursementPage /> }],
+  },
+  {
+    path: "/efas-v1/settings",
+    element: <AppLayout />,
+    children: [{ index: true, element: <EfasSettingsContainer /> }],
+  },
+  {
+    path: "/efas-v1/audit-trail",
+    element: <AppLayout />,
+    children: [{ index: true, element: <AuditTrailPage /> }],
+  },
+  // ── Legacy Routes ────────────────────────────────────────────────────────────
   {
     path: "/efas-v1/portal",
     element: <>
