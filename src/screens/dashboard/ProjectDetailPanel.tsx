@@ -30,29 +30,21 @@ interface Props {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(val: string | null) {
-    if (!val) return '—'
-    const n = parseFloat(val)
-    if (isNaN(n)) return '—'
-    return `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
-}
+// function fmt(val: string | null) {
+//     if (!val) return '—'
+//     const n = parseFloat(val)
+//     if (isNaN(n)) return '—'
+//     return `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+// }
 
 function fmtNum(n: number) {
     return `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
 }
 
-function pct(num: number, den: number) {
-    if (den === 0) return 0
-    return Math.min(100, Math.round((num / den) * 100))
-}
-
-function ProgressBar({ value, color = 'bg-primary' }: { value: number; color?: string }) {
-    return (
-        <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
-        </div>
-    )
-}
+// function pct(num: number, den: number) {
+//     if (den === 0) return 0
+//     return Math.min(100, Math.round((num / den) * 100))
+// }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -242,14 +234,14 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
     )
 }
 
-function ProgressRow({ label, pct, value, color }: { label: string; pct: number; value: string; color: string }) {
-    return (
-        <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-gmedium">{label}</span>
-                <span className="font-gbold text-foreground">{pct}% — {value}</span>
-            </div>
-            <ProgressBar value={pct} color={color} />
-        </div>
-    )
-}
+// function ProgressRow({ label, pct, value, color }: { label: string; pct: number; value: string; color: string }) {
+//     return (
+//         <div className="flex flex-col gap-1.5">
+//             <div className="flex items-center justify-between text-xs">
+//                 <span className="text-muted-foreground font-gmedium">{label}</span>
+//                 <span className="font-gbold text-foreground">{pct}% — {value}</span>
+//             </div>
+//             <ProgressBar value={pct} color={color} />
+//         </div>
+//     )
+// }

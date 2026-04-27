@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import efasApi from '@/plugin/efasApi'
 import { Plus, Pencil, Trash2, Eye } from 'lucide-react'
-import AddSaroDialog from './dialogs/AddSaroDialog'
+import AddSaroDialog from './dialogs/AddRaodDialog'
 import ViewSaroDialog from './dialogs/ViewRaodDialog'
-import UpdateSaroDialog from './dialogs/UpdateSaroDialog'
+import UpdateSaroDialog from './dialogs/UpdateRaodDialog'
+import type { PAP, ObjectCode } from './RaodMainContainer'
 
 export interface ClassType { id: number; code: string; name: string; money_range_min: string | null; money_range_max: string | null }
 export interface FundSource { id: number; code: string; name: string; is_sagf: boolean; sagf_type: string | null }
-export interface PAP { id: number; code: string; name: string; particular: string; fund: number | null; class_type: number | null; fund_detail: FundSource | null; class_type_detail: ClassType | null }
-export interface ObjectCode { id: number; code: string; description: string }
 export interface Saro {
     id: number
     pap: string
     pap_code: string
+    purpose: string
+    year: number | null
     date_of_saro: string
     saro_no: string
     amount_of_allotment: string
@@ -49,7 +50,6 @@ export default function SaroMainContainer() {
     const [fundSources, setFundSources] = useState<FundSource[]>([])
     const [paps, setPaps] = useState<PAP[]>([])
     const [objectCodes, setObjectCodes] = useState<ObjectCode[]>([])
-    const [receivedSaroNos, setReceivedSaroNos] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
     const [showAdd, setShowAdd] = useState(false)
     const [viewTarget, setViewTarget] = useState<Saro | null>(null)
@@ -58,19 +58,17 @@ export default function SaroMainContainer() {
     const fetchAll = async () => {
         setLoading(true)
         try {
-            const [saroRes, ctRes, fsRes, papRes, recRes, ocRes] = await Promise.all([
+            const [saroRes, ctRes, fsRes, papRes, ocRes] = await Promise.all([
                 efasApi.get('saro/saros/'),
                 efasApi.get('saro/class-types/'),
                 efasApi.get('saro/fund-sources/'),
                 efasApi.get('saro/paps/'),
-                efasApi.get('saro/received-saros/'),
                 efasApi.get('saro/object-codes/'),
             ])
             setSaros(saroRes.data)
             setClassTypes(ctRes.data)
             setFundSources(fsRes.data)
             setPaps(papRes.data)
-            setReceivedSaroNos((recRes.data as { saro_no: string }[]).map(r => r.saro_no))
             setObjectCodes(ocRes.data)
         } finally {
             setLoading(false)
@@ -80,7 +78,7 @@ export default function SaroMainContainer() {
     useEffect(() => { fetchAll() }, [])
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm('Delete this RAOD record?')) return
+        if (!window.confirm('Delete this SARO record?')) return
         await efasApi.delete(`saro/saros/${id}/`)
         fetchAll()
     }
@@ -89,14 +87,14 @@ export default function SaroMainContainer() {
         <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-gbold text-foreground">RAOD</h1>
-                    <p className="text-muted-foreground text-sm mt-0.5">Registry of Allotments, Obligations and Disbursements</p>
+                    <h1 className="text-2xl font-gbold text-foreground">SARO</h1>
+                    <p className="text-muted-foreground text-sm mt-0.5">Special Allotment Release Orders</p>
                 </div>
                 <button
                     onClick={() => setShowAdd(true)}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-gmedium px-4 py-2 rounded-lg transition"
                 >
-                    <Plus size={16} /> Add RAOD
+                    <Plus size={16} /> Add SARO
                 </button>
             </div>
 
@@ -104,7 +102,7 @@ export default function SaroMainContainer() {
                 {loading ? (
                     <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Loading...</div>
                 ) : saros.length === 0 ? (
-                    <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">No RAOD records found.</div>
+                    <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">No SARO records found.</div>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
@@ -152,7 +150,7 @@ export default function SaroMainContainer() {
                     paps={paps}
                     saros={saros}
                     objectCodes={objectCodes}
-                    receivedSaroNos={receivedSaroNos}
+                    receivedSaroNos={[]}
                     onClose={() => setShowAdd(false)}
                     onSaved={fetchAll}
                 />

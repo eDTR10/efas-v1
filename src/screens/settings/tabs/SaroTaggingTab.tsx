@@ -125,7 +125,7 @@ export default function SaroTaggingTab() {
                                         />
                                         <div className="flex flex-col gap-0.5 min-w-0">
                                             <span className="text-sm font-gmedium text-foreground">{s.saro_no}</span>
-                                            <span className="text-xs text-muted-foreground">{s.date_of_saro} · ₱{parseFloat(s.amount_of_allotment).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-xs text-muted-foreground">{s.date_received} · ₱{parseFloat(s.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </label>
                                 ))}
