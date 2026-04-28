@@ -79,6 +79,11 @@ function formatPHP(val: string | null) {
 }
 
 export default function RaodMainContainer() {
+    const currentUser = (() => {
+        try { return JSON.parse(localStorage.getItem('efas_user') || '{}') } catch { return {} }
+    })()
+    const canCRUD = currentUser?.is_staff || currentUser?.role === 'budget' || currentUser?.role === 'admin'
+
     const [saros, setSaros] = useState<Saro[]>([])
     const [classTypes, setClassTypes] = useState<ClassType[]>([])
     const [fundSources, setFundSources] = useState<FundSource[]>([])
@@ -177,10 +182,19 @@ export default function RaodMainContainer() {
 
     // Auto-open detail panel from navigation state (e.g. from Dashboard "View Full Report")
     useEffect(() => {
-        const openSaroNo = (location.state as { openSaroNo?: string } | null)?.openSaroNo
-        if (openSaroNo && groups.length > 0) {
-            const g = groups.find(gr => gr.saro_no === openSaroNo)
+        const state = location.state as { openSaroNo?: string; expandSaroNo?: string } | null
+        if (!groups.length) return
+        if (state?.openSaroNo) {
+            const g = groups.find(gr => gr.saro_no === state.openSaroNo)
             if (g) setDetailGroup(g)
+        }
+        if (state?.expandSaroNo) {
+            const key = state.expandSaroNo
+            setExpandedGroups(prev => new Set([...prev, key]))
+            // Scroll to the row after a tick
+            setTimeout(() => {
+                document.getElementById(`saro-row-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }, 150)
         }
     }, [location.state, groups])
 
@@ -222,12 +236,14 @@ export default function RaodMainContainer() {
                         <h1 className="text-2xl font-gbold text-foreground">RAOD</h1>
                         <p className="text-muted-foreground text-sm mt-0.5">Registry of Allotments, Obligations and Disbursements</p>
                     </div>
-                    <button
-                        onClick={() => setShowAdd(true)}
-                        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-gmedium px-4 py-2 rounded-lg transition"
-                    >
-                        <Plus size={16} /> Add RAOD
-                    </button>
+                    {canCRUD && (
+                        <button
+                            onClick={() => setShowAdd(true)}
+                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-gmedium px-4 py-2 rounded-lg transition"
+                        >
+                            <Plus size={16} /> Add RAOD
+                        </button>
+                    )}
                 </div>
 
                 {/* ── Search & Filters ─────────────────────────────────────────── */}
@@ -309,6 +325,7 @@ export default function RaodMainContainer() {
                                         <>
                                             <tr
                                                 key={key}
+                                                id={`saro-row-${key}`}
                                                 className="border-b border-border hover:bg-muted/20 transition cursor-pointer"
                                                 onClick={() => toggleGroup(key)}
                                             >
@@ -333,21 +350,25 @@ export default function RaodMainContainer() {
                                                 </td>
                                                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                                                     <div className="flex items-center gap-1.5">
-                                                        <button
-                                                            onClick={() => setAddObligationTarget(g)}
-                                                            title="Add Obligation"
-                                                            className="p-1.5 rounded hover:bg-primary/10 transition text-muted-foreground hover:text-primary"
-                                                        ><Plus size={14} /></button>
-                                                        <button onClick={() => setEditTarget(g.entries[0])} title="Edit SARO" className={actBtn}><Pencil size={14} /></button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!window.confirm(`Delete all ${g.entries.length} record(s) under SARO ${g.saro_no}?`)) return
-                                                                await Promise.all(g.entries.map(e => efasApi.delete(`saro/saros/${e.id}/`)))
-                                                                fetchAll()
-                                                            }}
-                                                            title="Delete SARO group"
-                                                            className="p-1.5 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"
-                                                        ><Trash2 size={14} /></button>
+                                                        {canCRUD && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => setAddObligationTarget(g)}
+                                                                    title="Add Obligation"
+                                                                    className="p-1.5 rounded hover:bg-primary/10 transition text-muted-foreground hover:text-primary"
+                                                                ><Plus size={14} /></button>
+                                                                <button onClick={() => setEditTarget(g.entries[0])} title="Edit SARO" className={actBtn}><Pencil size={14} /></button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (!window.confirm(`Delete all ${g.entries.length} record(s) under SARO ${g.saro_no}?`)) return
+                                                                        await Promise.all(g.entries.map(e => efasApi.delete(`saro/saros/${e.id}/`)))
+                                                                        fetchAll()
+                                                                    }}
+                                                                    title="Delete SARO group"
+                                                                    className="p-1.5 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"
+                                                                ><Trash2 size={14} /></button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -438,8 +459,12 @@ export default function RaodMainContainer() {
                                                                                 <td className="py-2">
                                                                                     <div className="flex items-center gap-1">
                                                                                         <button onClick={() => setViewTarget(entry)} className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"><Eye size={12} /></button>
-                                                                                        <button onClick={() => setEditTarget(entry)} className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"><Pencil size={12} /></button>
-                                                                                        <button onClick={() => handleDelete(entry.id)} className="p-1 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                                                                                        {canCRUD && (
+                                                                                            <>
+                                                                                                <button onClick={() => setEditTarget(entry)} className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"><Pencil size={12} /></button>
+                                                                                                <button onClick={() => handleDelete(entry.id)} className="p-1 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
+                                                                                            </>
+                                                                                        )}
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -537,6 +562,14 @@ export default function RaodMainContainer() {
                             fetchAll()
                         }}
                         onAddObligation={() => setAddObligationTarget(detailGroup)}
+                        onViewInRaod={() => {
+                            const key = detailGroup.saro_no
+                            setDetailGroup(null)
+                            setExpandedGroups(prev => new Set([...prev, key]))
+                            setTimeout(() => {
+                                document.getElementById(`saro-row-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }, 100)
+                        }}
                     />
                 </div>
             )}

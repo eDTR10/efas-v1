@@ -191,7 +191,7 @@ export default function ProjectDetailPanel({ programName, programCode, raodRecor
                                                 </div>
                                                 <div className="border-t border-border/50 px-4 py-2 flex justify-end">
                                                     <button
-                                                        onClick={() => { navigate('/efas-v1/saro', { state: { openSaroNo: saroNo } }); onClose() }}
+                                                        onClick={() => { navigate('/efas-v1/saro', { state: { openSaroNo: saroNo, expandSaroNo: saroNo } }); onClose() }}
                                                         className="flex items-center gap-1 text-[10px] text-primary hover:underline font-gmedium"
                                                     >
                                                         View in RAOD <ChevronRight size={10} />

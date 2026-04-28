@@ -30,11 +30,28 @@ The RAOD module is the core financial ledger of eFAS. It manages the full lifecy
 
 ---
 
-### 2. NTCA — Notice of Transfer of Cash Allocation
+### 2. Received SARO
+
+The Received SARO module serves as the official registry of SAROs received by DICT Regional Office 10 from the central office. It acts as the reference list for all allotments that the office is authorized to obligate.
+
+**Key features:**
+
+- Register and manage received SAROs with date, amount, fund source, and particulars
+- Archive inactive or superseded SARO entries without deletion
+- Search and filter by SARO number, fund source, or particulars
+- Serves as the master reference for RAOD grouping and NTCA linkage
+
+---
+
+### 3. NTCA — Notice of Transfer of Cash Allocation
 
 The NTCA module tracks cash allocation transfers received by the regional office and monitors how they are disbursed across quarters and programs.
 
 **Key features:**
+
+#### NTCA Records
+
+Manages individual NTCA entries linked to specific SARO numbers. Tracks the NTCA number, NCA number, amount, fund source, class type, and PAP code. Supports archiving and full search/filter capabilities.
 
 #### NTCA Balance
 
@@ -43,6 +60,19 @@ Tracks NTCA received vs. disbursements per PAP per quarter, computing the runnin
 #### NTCA Request
 
 Manages monthly NTCA request submissions per PAP. Tracks obligated amounts and the requested NTCA per month, with Google Sheets integration for data entry and reporting. Supports year-level filtering and export.
+
+---
+
+### 4. Disbursement (Cashier)
+
+The Disbursement module is the cashier-facing view of eFAS. It tracks the actual release of funds against obligated amounts, providing a real-time picture of cash utilization for each SARO.
+
+**Key features:**
+
+- Record and monitor cash disbursements (cash, non-TRA, and ADA/check) per obligation entry
+- View per-SARO disbursement summaries and running balances
+- Role-restricted access — only users with the **Cashier** role can record and manage disbursement entries
+- Dashboard integration — disbursement figures feed the utilization indicators on the financial overview
 
 ---
 
@@ -83,17 +113,20 @@ npm run build
 
 ```
 src/
-├── components/       # Shared UI components (nav, inputs, loaders, etc.)
-├── plugin/           # Axios instances and API helpers
+├── components/        # Shared UI components (nav, inputs, loaders, etc.)
+├── plugin/            # Axios instances and API helpers
 ├── screens/
-│   ├── auth/         # Login, forgot password, reset password
-│   ├── dashboard/    # Financial overview dashboard
-│   ├── saro/         # RAOD module
-│   ├── ntca_balance/ # NTCA Balance module
-│   ├── ntca_request/ # NTCA Request module
-│   ├── settings/     # System settings (PAPs, fund sources, class types, etc.)
-│   └── admin/        # Admin panel
-└── lib/              # Utility functions
+│   ├── auth/          # Login, forgot password, reset password
+│   ├── dashboard/     # Financial overview dashboard, app layout, detail panels
+│   ├── saro/          # RAOD module
+│   ├── received_saro/ # Received SARO registry
+│   ├── ntca_records/  # NTCA records management
+│   ├── ntca_balance/  # NTCA Balance module
+│   ├── ntca_request/  # NTCA Request module
+│   ├── settings/      # System settings (PAPs, fund sources, class types, etc.)
+│   ├── user_management/ # User management (admin only)
+│   └── admin/         # Admin panel
+└── lib/               # Utility functions
 ```
 
 ---

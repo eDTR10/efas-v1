@@ -1,4 +1,4 @@
-import { ChevronRight, X, Plus, Pencil, Trash2, Eye } from 'lucide-react'
+import { ChevronRight, X, Plus, Pencil, Trash2, Eye, ExternalLink } from 'lucide-react'
 import type { SaroGroup, Saro, Ntca } from './RaodMainContainer'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -39,11 +39,17 @@ interface Props {
     onEdit: (e: Saro) => void
     onDelete: (id: number) => void
     onAddObligation: () => void
+    onViewInRaod: () => void
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function RaodDetailPanel({ group, ntcas, onClose, onView, onEdit, onDelete, onAddObligation }: Props) {
+export default function RaodDetailPanel({ group, ntcas, onClose, onView, onEdit, onDelete, onAddObligation, onViewInRaod }: Props) {
+    const currentUser = (() => {
+        try { return JSON.parse(localStorage.getItem('efas_user') || '{}') } catch { return {} }
+    })()
+    const canCRUD = currentUser?.is_staff || currentUser?.role === 'budget' || currentUser?.role === 'admin'
+
     const amount = parseFloat(group.amount_of_allotment || '0')
     const pct = amount > 0 ? Math.min(100, (group.total_obligated / amount) * 100) : 0
 
@@ -59,6 +65,13 @@ export default function RaodDetailPanel({ group, ntcas, onClose, onView, onEdit,
                 </button>
                 <ChevronRight size={11} className="text-muted-foreground shrink-0" />
                 <span className="text-xs font-gbold text-foreground truncate flex-1">{group.saro_no || '—'}</span>
+                <button
+                    onClick={onViewInRaod}
+                    title="Expand this SARO in the main table"
+                    className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-gmedium px-2 py-1 rounded hover:bg-primary/10 transition shrink-0"
+                >
+                    <ExternalLink size={11} /> View in RAOD
+                </button>
                 <button
                     onClick={onClose}
                     className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground shrink-0 ml-1"
@@ -80,7 +93,7 @@ export default function RaodDetailPanel({ group, ntcas, onClose, onView, onEdit,
                         </div>
                         <button
                             onClick={onAddObligation}
-                            className="flex items-center gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 px-2.5 py-1.5 rounded-lg font-gmedium transition shrink-0"
+                            className={`flex items-center gap-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 px-2.5 py-1.5 rounded-lg font-gmedium transition shrink-0 ${!canCRUD ? 'hidden' : ''}`}
                         >
                             <Plus size={11} /> Add Obligation
                         </button>
@@ -198,14 +211,18 @@ export default function RaodDetailPanel({ group, ntcas, onClose, onView, onEdit,
                                                     onClick={() => onView(entry)}
                                                     className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"
                                                 ><Eye size={11} /></button>
-                                                <button
-                                                    onClick={() => onEdit(entry)}
-                                                    className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"
-                                                ><Pencil size={11} /></button>
-                                                <button
-                                                    onClick={() => onDelete(entry.id)}
-                                                    className="p-1 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"
-                                                ><Trash2 size={11} /></button>
+                                                {canCRUD && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => onEdit(entry)}
+                                                            className="p-1 rounded hover:bg-muted transition text-muted-foreground hover:text-foreground"
+                                                        ><Pencil size={11} /></button>
+                                                        <button
+                                                            onClick={() => onDelete(entry.id)}
+                                                            className="p-1 rounded hover:bg-destructive/10 transition text-muted-foreground hover:text-destructive"
+                                                        ><Trash2 size={11} /></button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     )

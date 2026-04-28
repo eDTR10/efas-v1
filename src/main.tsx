@@ -14,11 +14,14 @@ import LoginPage from "./screens/auth/LoginPage";
 import AppLayout from "./screens/dashboard/AppLayout";
 import Dashboard from "./screens/dashboard/Dashboard";
 import SubARO from "./screens/dashboard/SubARO";
-import { DisbursementPage, AuditTrailPage } from "./screens/dashboard/StubPages";
+import { AuditTrailPage } from "./screens/dashboard/StubPages";
+import DisbursementMainContainer from "./screens/disbursement/DisbursementMainContainer";
 import RaodMainContainer from './screens/saro/RaodMainContainer';
 import ReceivedSaroMainContainer from './screens/received_saro/ReceivedSaroMainContainer';
 import EfasSettingsContainer from "./screens/settings/EfasSettingsContainer";
 import NTCAMainContainer from "./screens/ntca_records/NTCAMainContainer";
+import UserManagementContainer from "./screens/user_management/UserManagementContainer";
+import ReportsMainContainer from "./screens/reports/ReportsMainContainer";
 // ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -103,7 +106,7 @@ const router = createBrowserRouter([
   {
     path: "/efas-v1/disbursement",
     element: <AppLayout />,
-    children: [{ index: true, element: <DisbursementPage /> }],
+    children: [{ index: true, element: <DisbursementMainContainer /> }],
   },
   {
     path: "/efas-v1/settings",
@@ -114,6 +117,16 @@ const router = createBrowserRouter([
     path: "/efas-v1/audit-trail",
     element: <AppLayout />,
     children: [{ index: true, element: <AuditTrailPage /> }],
+  },
+  {
+    path: "/efas-v1/user-management",
+    element: <AppLayout />,
+    children: [{ index: true, element: <UserManagementContainer /> }],
+  },
+  {
+    path: "/efas-v1/reports",
+    element: <AppLayout />,
+    children: [{ index: true, element: <ReportsMainContainer /> }],
   },
   // ── Legacy Routes ────────────────────────────────────────────────────────────
   {

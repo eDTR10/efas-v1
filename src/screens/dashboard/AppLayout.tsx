@@ -12,23 +12,46 @@ import {
     X,
     ChevronRight,
     ScrollText,
-    User,
+    Users,
+    User as UserIcon,
+    BookMarked,
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ModeToggle } from '@/components/mode-toggle'
 import efasApi from '@/plugin/efasApi'
 import efasLogo from '@/assets/eFAS_Logo.png'
 
-const navItems = [
-    { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/efas-v1/saro', label: 'RAOD', icon: ScrollText },
-    // { to: '/efas-v1/sub-aro', label: 'Sub-ARO', icon: FileText },
-    { to: '/efas-v1/received-saro', label: 'Received SARO', icon: FileText },
-    { to: '/efas-v1/ntca', label: 'NTCA', icon: Landmark },
-    { to: '/efas-v1/disbursement', label: 'Disbursement', icon: CreditCard },
-    { to: '/efas-v1/settings', label: 'Settings', icon: Settings },
-    { to: '/efas-v1/audit-trail', label: 'Audit Trail', icon: ClipboardList },
+// ─── Role-based nav access ────────────────────────────────────────────────────
+
+const ALL_NAV_ITEMS = [
+    { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
+    { to: '/efas-v1/saro', label: 'RAOD', icon: ScrollText, key: 'saro' },
+    { to: '/efas-v1/received-saro', label: 'Received SARO', icon: FileText, key: 'received-saro' },
+    { to: '/efas-v1/ntca', label: 'NTCA', icon: Landmark, key: 'ntca' },
+    { to: '/efas-v1/disbursement', label: 'Disbursement', icon: CreditCard, key: 'disbursement' },
+    { to: '/efas-v1/reports', label: 'Reports', icon: BookMarked, key: 'reports' },
+    { to: '/efas-v1/settings', label: 'Settings', icon: Settings, key: 'settings' },
+    { to: '/efas-v1/audit-trail', label: 'Audit Trail', icon: ClipboardList, key: 'audit-trail' },
+    { to: '/efas-v1/user-management', label: 'User Management', icon: Users, key: 'user-management' },
 ]
+
+const ROLE_ACCESS: Record<string, Set<string>> = {
+    admin: new Set(['dashboard', 'saro', 'received-saro', 'ntca', 'disbursement', 'settings', 'audit-trail', 'user-management', 'reports']),
+    budget: new Set(['dashboard', 'saro', 'received-saro', 'settings', 'audit-trail', 'reports']),
+    accounting: new Set(['dashboard', 'ntca', 'settings', 'audit-trail', 'reports']),
+    cashier: new Set(['dashboard', 'disbursement', 'settings', 'audit-trail', 'reports']),
+    provincial_officer: new Set(['dashboard', 'saro']),
+    user: new Set(['dashboard', 'saro']),
+}
+
+function getNavItems(role: string, isStaff: boolean) {
+    // Superusers / staff see everything
+    if (isStaff) return ALL_NAV_ITEMS
+    const allowed = ROLE_ACCESS[role] ?? ROLE_ACCESS['user']
+    return ALL_NAV_ITEMS.filter(item => allowed.has(item.key))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AppLayout() {
     const navigate = useNavigate()
@@ -48,6 +71,8 @@ export default function AppLayout() {
     const initials = displayName
         ? displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
         : '?'
+
+    const navItems = getNavItems(user?.role || 'user', !!user?.is_staff)
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -204,7 +229,7 @@ export default function AppLayout() {
                                                 onClick={() => { setProfileOpen(false); navigate('/efas-v1/settings') }}
                                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition"
                                             >
-                                                <User size={15} className="text-muted-foreground" />
+                                                <UserIcon size={15} className="text-muted-foreground" />
                                                 Profile
                                             </button>
                                             <button
