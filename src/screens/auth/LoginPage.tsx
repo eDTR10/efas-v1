@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ModeToggle } from '@/components/mode-toggle'
 import { EyeIcon, EyeOffIcon, ShieldCheck } from 'lucide-react'
-import efasApi from '@/plugin/efasApi'
+import efasApi from '@/plugin/axios'
 import efasLogo from '@/assets/eFAS_Logo.png'
 import dictLogo from '@/assets/DICT-Logo-Final-2-300x153.png'
 

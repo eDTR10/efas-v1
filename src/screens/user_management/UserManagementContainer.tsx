@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import efasApi from '@/plugin/efasApi'
+import efasApi from '@/plugin/axios'
 import {
     Plus, Pencil, Trash2, Search, X, Shield, UserCheck, UserX,
     RefreshCw, Key,

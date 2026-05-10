@@ -1,57 +1,33 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+﻿import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import {
     LayoutDashboard,
+    ScrollText,
     FileText,
-    Landmark,
-    CreditCard,
+    BookMarked,
     Settings,
     ClipboardList,
+    Users,
     LogOut,
     Menu,
     X,
     ChevronRight,
-    ScrollText,
-    Users,
     User as UserIcon,
-    BookMarked,
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ModeToggle } from '@/components/mode-toggle'
-import efasApi from '@/plugin/efasApi'
+import efasApi from '@/plugin/axios'
 import efasLogo from '@/assets/eFAS_Logo.png'
 
-// ─── Role-based nav access ────────────────────────────────────────────────────
-
-const ALL_NAV_ITEMS = [
-    { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
-    { to: '/efas-v1/saro', label: 'RAOD', icon: ScrollText, key: 'saro' },
-    { to: '/efas-v1/received-saro', label: 'Received SARO', icon: FileText, key: 'received-saro' },
-    { to: '/efas-v1/ntca', label: 'NTCA', icon: Landmark, key: 'ntca' },
-    { to: '/efas-v1/disbursement', label: 'Disbursement', icon: CreditCard, key: 'disbursement' },
-    { to: '/efas-v1/reports', label: 'Reports', icon: BookMarked, key: 'reports' },
-    { to: '/efas-v1/settings', label: 'Settings', icon: Settings, key: 'settings' },
-    { to: '/efas-v1/audit-trail', label: 'Audit Trail', icon: ClipboardList, key: 'audit-trail' },
-    { to: '/efas-v1/user-management', label: 'User Management', icon: Users, key: 'user-management' },
+const NAV_ITEMS = [
+    { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/efas-v1/raod', label: 'RAOD', icon: ScrollText },
+    { to: '/efas-v1/received-saro', label: 'SARO Received', icon: FileText },
+    { to: '/efas-v1/reports', label: 'Reports', icon: BookMarked },
+    { to: '/efas-v1/settings', label: 'Settings', icon: Settings },
+    { to: '/efas-v1/audit-trail', label: 'Audit Trail', icon: ClipboardList },
+    { to: '/efas-v1/user-management', label: 'User Management', icon: Users },
 ]
-
-const ROLE_ACCESS: Record<string, Set<string>> = {
-    admin: new Set(['dashboard', 'saro', 'received-saro', 'ntca', 'disbursement', 'settings', 'audit-trail', 'user-management', 'reports']),
-    budget: new Set(['dashboard', 'saro', 'received-saro', 'settings', 'audit-trail', 'reports']),
-    accounting: new Set(['dashboard', 'ntca', 'settings', 'audit-trail', 'reports']),
-    cashier: new Set(['dashboard', 'disbursement', 'settings', 'audit-trail', 'reports']),
-    provincial_officer: new Set(['dashboard', 'saro']),
-    user: new Set(['dashboard', 'saro']),
-}
-
-function getNavItems(role: string, isStaff: boolean) {
-    // Superusers / staff see everything
-    if (isStaff) return ALL_NAV_ITEMS
-    const allowed = ROLE_ACCESS[role] ?? ROLE_ACCESS['user']
-    return ALL_NAV_ITEMS.filter(item => allowed.has(item.key))
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AppLayout() {
     const navigate = useNavigate()
@@ -72,9 +48,6 @@ export default function AppLayout() {
         ? displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
         : '?'
 
-    const navItems = getNavItems(user?.role || 'user', !!user?.is_staff)
-
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -96,8 +69,8 @@ export default function AppLayout() {
     }
 
     const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
-        <div className={`flex flex-col h-full ${mobile ? '' : ''}`}>
-            {/* Logo — always shown in both permanent and overlay sidebars */}
+        <div className="flex flex-col h-full">
+            {/* Logo */}
             <div className="relative flex items-center justify-center bg-primary border-b border-border/30 px-4 py-4" style={{ minHeight: 64 }}>
                 <img
                     src={efasLogo}
@@ -116,7 +89,7 @@ export default function AppLayout() {
 
             {/* Nav items */}
             <nav className="flex-1 flex flex-col gap-1 py-4 px-2 overflow-y-auto">
-                {navItems.map(({ to, label, icon: Icon }) => (
+                {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
                     <NavLink
                         key={to}
                         to={to}
@@ -137,7 +110,7 @@ export default function AppLayout() {
                 ))}
             </nav>
 
-            {/* Divider + Logout */}
+            {/* Logout */}
             <div className="border-t border-border px-2 py-4 flex flex-col gap-2">
                 {(!collapsed || mobile) && user?.email && (
                     <div className="px-3 py-2 text-xs text-muted-foreground">
@@ -185,7 +158,6 @@ export default function AppLayout() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Topbar */}
                     <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0">
-                        {/* Left: hamburger + logo (logo only when sidebar is closed) */}
                         <div className="flex items-center gap-3">
                             <button
                                 className="md:hidden text-muted-foreground hover:text-foreground transition"
@@ -193,13 +165,6 @@ export default function AppLayout() {
                             >
                                 {mobileOpen ? <X size={20} /> : <Menu size={20} />}
                             </button>
-                            {/* {!mobileOpen && (
-                                <div className="md:hidden flex items-center">
-                                    <div className="bg-primary rounded-sm px-2 py-1">
-                                        <img src={efasLogo} alt="eFAS" className="h-7 w-auto object-contain" />
-                                    </div>
-                                </div>
-                            )} */}
                         </div>
                         <div className="flex items-center gap-3">
                             <ModeToggle />
@@ -215,15 +180,12 @@ export default function AppLayout() {
                                     </div>
                                 </button>
 
-                                {/* Dropdown */}
                                 {profileOpen && (
                                     <div className="absolute right-0 top-11 z-50 w-56 rounded-xl bg-card border border-border shadow-xl overflow-hidden">
-                                        {/* User info */}
                                         <div className="px-4 py-3 border-b border-border">
                                             <p className="text-sm font-gmedium text-foreground truncate">{displayName}</p>
                                             <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
                                         </div>
-                                        {/* Menu items */}
                                         <div className="py-1">
                                             <button
                                                 onClick={() => { setProfileOpen(false); navigate('/efas-v1/settings') }}
