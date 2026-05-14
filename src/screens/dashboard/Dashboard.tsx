@@ -69,6 +69,8 @@ interface RAODRecord {
     entries: RAODEntry[]
 }
 
+interface FundTypeDef { id: number; code: string; name: string }
+
 /** Derived per-PAP aggregate */
 interface PAPStat {
     name: string
@@ -108,13 +110,17 @@ function RealtimeBadge() {
 // ─── Financial Overview Card ────────────────────────────────────────────────────
 
 function FinancialCard({
-    title, rows, accentClass, onClick,
+    title, rows, collapsibleRows = [], accentClass, onClick,
 }: {
     title: string
     rows: { label: string; value: string; highlight?: boolean; color?: string; sub?: string; barPct?: number }[]
-    accentClass: string  // e.g. 'border-t-blue-500'
+    collapsibleRows?: { label: string; value: string; barPct?: number }[]
+    accentClass: string
     onClick?: () => void
 }) {
+    const [expanded, setExpanded] = useState(false)
+    const mainRows = rows.filter(r => !r.highlight)
+    const highlightRows = rows.filter(r => r.highlight)
     return (
         <div
             className={`bg-card border border-border border-t-2 ${accentClass} rounded-xl flex flex-col min-w-0 overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
@@ -125,19 +131,73 @@ function FinancialCard({
                 <RealtimeBadge />
             </div>
             <div className="px-5 pb-4 flex flex-col">
-                {rows.map((row, i) => (
-                    <div
-                        key={i}
-                        className={`${row.highlight ? 'pt-2 mt-2 border-t border-border/50' : 'py-0.5'}`}
-                    >
+                {mainRows.map((row, i) => (
+                    <div key={i} className="py-0.5">
                         <div className="flex items-baseline justify-between">
-                            <span className={`text-[10px] font-gbold uppercase tracking-wide ${row.highlight ? 'text-foreground/70' : 'text-muted-foreground'}`}>
-                                {row.label}
-                            </span>
+                            <span className="text-[10px] font-gbold uppercase tracking-wide text-muted-foreground">{row.label}</span>
                             <div className="text-right">
-                                <span className={`font-gbold tabular-nums ${row.highlight ? 'text-xl' : 'text-sm'} ${row.color ?? 'text-foreground'}`}>
-                                    {row.value}
+                                <span className={`font-gbold tabular-nums text-sm ${row.color ?? 'text-foreground'}`}>{row.value}</span>
+                                {row.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{row.sub}</p>}
+                            </div>
+                        </div>
+                        {row.barPct !== undefined && (
+                            <div className="mt-1.5 flex items-center gap-2">
+                                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-500 ${row.barPct >= 80 ? 'bg-green-500' : row.barPct >= 50 ? 'bg-amber-500' : ''}`}
+                                        style={{ width: `${Math.min(100, Math.max(0, row.barPct))}%` }}
+                                    />
+                                </div>
+                                <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : ''}`}>
+                                    {row.barPct.toFixed(0)}%
                                 </span>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {/* +N others chip */}
+                {collapsibleRows.length > 0 && (
+                    <>
+                        {expanded && collapsibleRows.map((row, i) => (
+                            <div key={`extra-${i}`} className="py-0.5">
+                                <div className="flex items-baseline justify-between">
+                                    <span className="text-[10px] font-gbold uppercase tracking-wide text-muted-foreground">{row.label}</span>
+                                    <span className="font-gbold tabular-nums text-sm text-foreground">{row.value}</span>
+                                </div>
+                                {row.barPct !== undefined && (
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${row.barPct >= 80 ? 'bg-green-500' : row.barPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`}
+                                                style={{ width: `${Math.min(100, Math.max(0, row.barPct))}%` }}
+                                            />
+                                        </div>
+                                        <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
+                                            {row.barPct.toFixed(0)}%
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        <button
+                            onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
+                            className="mt-1.5 self-start inline-flex items-center gap-1 text-[10px] font-gbold px-2 py-0.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition"
+                        >
+                            {expanded
+                                ? 'Show less'
+                                : `+${collapsibleRows.length} other${collapsibleRows.length !== 1 ? 's' : ''}`}
+                        </button>
+                    </>
+                )}
+
+                {/* Consolidated / highlight rows always at bottom */}
+                {highlightRows.map((row, i) => (
+                    <div key={`hl-${i}`} className="pt-2 mt-2 border-t border-border/50">
+                        <div className="flex items-baseline justify-between">
+                            <span className="text-[10px] font-gbold uppercase tracking-wide text-foreground/70">{row.label}</span>
+                            <div className="text-right">
+                                <span className={`font-gbold tabular-nums text-xl ${row.color ?? 'text-foreground'}`}>{row.value}</span>
                                 {row.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{row.sub}</p>}
                             </div>
                         </div>
@@ -679,8 +739,9 @@ export default function Dashboard() {
     const navigate = useNavigate()
     const [saros, setSaros] = useState<ReceivedSARO[]>([])
     const [raods, setRaods] = useState<RAODRecord[]>([])
+    const [fundTypeList, setFundTypeList] = useState<FundTypeDef[]>([])
     const [loading, setLoading] = useState(true)
-    const [filterClass, setFilterClass] = useState<string>('All')
+    const [filterFund, setFilterFund] = useState<string>('All')
     const [filterPap, setFilterPap] = useState<string>('All')
     const [selectedPapStat, setSelectedPapStat] = useState<PAPStat | null>(null)
 
@@ -688,37 +749,44 @@ export default function Dashboard() {
         Promise.allSettled([
             efasApi.get('received-saro/'),
             efasApi.get('raod/'),
-        ]).then(([saroRes, raodRes]) => {
+            efasApi.get('fund-type/'),
+        ]).then(([saroRes, raodRes, ftRes]) => {
             if (saroRes.status === 'fulfilled') setSaros(saroRes.value.data)
             if (raodRes.status === 'fulfilled') setRaods(raodRes.value.data)
+            if (ftRes.status === 'fulfilled') setFundTypeList(ftRes.value.data)
         }).finally(() => setLoading(false))
     }, [])
 
     // ── All items flattened ────────────────────────────────────────────────────
     const allItems = saros.flatMap(s => s.items)
 
-    // ── Filter by class type ───────────────────────────────────────────────────
-    const classSaros = filterClass === 'All'
+    // ── Code → name lookup from API fund-type list ──────────────────────────────
+    const ftCodeToName = new Map(fundTypeList.map(f => [f.code, f.name]))
+    const resolveFund = (code: string) => ftCodeToName.get(code) || code
+
+    // ── Fund type options ─────────────────────────────────────────────────────
+    // Use the API list when loaded; fall back to data-derived names (no raw numeric codes)
+    const fundTypes: FundTypeDef[] = fundTypeList.length > 0
+        ? fundTypeList
+        : [...new Set(allItems.map(i => i.fund_type).filter(ft => Boolean(ft) && !/^\d+$/.test(ft.trim())))]
+            .sort().map(ft => ({ id: 0, code: ft, name: ft }))
+
+    // ── Filter by fund type (filterFund stores the code) ────────────────────────
+    const fundSaros = filterFund === 'All'
         ? saros
-        : saros.filter(s => s.class_type === filterClass || s.items.some(i => i.class_type === filterClass))
+        : saros.filter(s => s.items.some(i => i.fund_type === filterFund))
 
-    // ── Class type options ─────────────────────────────────────────────────────
-    const classTypes = [...new Set([
-        ...saros.map(s => s.class_type).filter(Boolean),
-        ...allItems.map(i => i.class_type).filter(Boolean),
-    ])].sort()
-
-    // ── PAP / Project options for dropdown (from class-filtered saros) ─────────
+    // ── PAP / Project options for dropdown (from fund-filtered saros) ──────────
     const papOptions = [...new Map(
-        classSaros.flatMap(s => s.items)
+        fundSaros.flatMap(s => s.items)
             .filter(i => i.pap_code)
             .map(i => [i.pap_code, { code: i.pap_code, name: i.pap_name || i.pap_code }])
     ).values()].sort((a, b) => a.name.localeCompare(b.name))
 
     // ── Filter by PAP / Project ────────────────────────────────────────────────
     const filteredSaros = filterPap === 'All'
-        ? classSaros
-        : classSaros.filter(s => s.items.some(i => i.pap_code === filterPap))
+        ? fundSaros
+        : fundSaros.filter(s => s.items.some(i => i.pap_code === filterPap))
 
     // ── Totals ─────────────────────────────────────────────────────────────────
     const totalAllotment = filteredSaros.reduce((s, r) => s + parseN(r.total_amount), 0)
@@ -726,19 +794,41 @@ export default function Dashboard() {
     const totalBalance = totalAllotment - totalObligation
     const totalAmount = filteredSaros.flatMap(s => s.items).reduce((s, i) => s + parseN(i.amount), 0)
 
-    // ── Class-type breakdown for cards ────────────────────────────────────────
-    const classSums = new Map<string, { allotment: number; obligation: number }>()
+    // ── Fund-type breakdown for cards ─────────────────────────────────────────
+    const fundSums = new Map<string, { allotment: number; obligation: number }>()
     filteredSaros.forEach(s => {
-        const ct = s.class_type || 'Other'
-        const existing = classSums.get(ct) ?? { allotment: 0, obligation: 0 }
-        existing.allotment += parseN(s.total_amount)
-        existing.obligation += s.items.reduce((sum, i) => sum + parseN(i.nca_amount), 0)
-        classSums.set(ct, existing)
+        if (s.items.length > 0) {
+            s.items.forEach(item => {
+                const ft = item.fund_type || 'Other'
+                const existing = fundSums.get(ft) ?? { allotment: 0, obligation: 0 }
+                existing.allotment += parseN(item.amount)
+                existing.obligation += parseN(item.nca_amount)
+                fundSums.set(ft, existing)
+            })
+        } else {
+            const ft = 'Other'
+            const existing = fundSums.get(ft) ?? { allotment: 0, obligation: 0 }
+            existing.allotment += parseN(s.total_amount)
+            fundSums.set(ft, existing)
+        }
     })
-    const classRows = Array.from(classSums.entries())
-        .filter(([, v]) => v.allotment > 0)
+    // Show Current → Continuing in cards (case-insensitive keyword match)
+    // e.g. 'CURRENT', 'Current', 'CONTINUING FUNDS', 'Continuing Funds' all match
+    const fundEntries = Array.from(fundSums.entries()).filter(([, v]) => v.allotment > 0)
+    const findFund = (keyword: string) =>
+        fundEntries.find(([ft]) => ft.toLowerCase().includes(keyword.toLowerCase()))
+    const fundRows: [string, { allotment: number; obligation: number }][] = (() => {
+        const current = findFund('current')
+        const continuing = findFund('continu')
+        const fixed = [current, continuing].filter((e): e is [string, { allotment: number; obligation: number }] => !!e && e[1].allotment > 0)
+        if (fixed.length > 0) return fixed
+        return fundEntries.sort((a, b) => b[1].allotment - a[1].allotment).slice(0, 3)
+    })()
+
+    const pinnedKeys = new Set(fundRows.map(([n]) => n))
+    const fundExtraRows = fundEntries
+        .filter(([n]) => !pinnedKeys.has(n))
         .sort((a, b) => b[1].allotment - a[1].allotment)
-        .slice(0, 3)
 
     // ── PAP stats for charts ──────────────────────────────────────────────────
     const papMap = new Map<string, PAPStat>()
@@ -811,19 +901,19 @@ export default function Dashboard() {
                             Financial overview — DICT Regional Office 10
                         </p>
                     </div>
-                    {!loading && (classTypes.length > 0 || papOptions.length > 0) && (
+                    {!loading && (fundTypes.length > 0 || papOptions.length > 0) && (
                         <div className="flex items-center gap-3 flex-wrap shrink-0 mt-1">
-                            {classTypes.length > 0 && (
+                            {fundTypes.length > 0 && (
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Class:</span>
+                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Fund Type:</span>
                                     <select
-                                        value={filterClass}
-                                        onChange={e => { setFilterClass(e.target.value); setFilterPap('All') }}
+                                        value={filterFund}
+                                        onChange={e => { setFilterFund(e.target.value); setFilterPap('All') }}
                                         className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary"
                                     >
-                                        <option value="All">All Classes</option>
-                                        {classTypes.map(ct => (
-                                            <option key={ct} value={ct}>{ct}</option>
+                                        <option value="All">All Fund Types</option>
+                                        {fundTypes.map(ft => (
+                                            <option key={ft.code} value={ft.code}>{ft.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -858,8 +948,8 @@ export default function Dashboard() {
                                 title="Received SARO (Allotment)"
                                 accentClass="border-t-blue-500"
                                 rows={[
-                                    ...classRows.map(([code, v]) => ({
-                                        label: code,
+                                    ...fundRows.map(([ft, v]) => ({
+                                        label: ft,
                                         value: fmtPHP(v.allotment),
                                     })),
                                     {
@@ -868,14 +958,18 @@ export default function Dashboard() {
                                         highlight: true,
                                     },
                                 ]}
+                                collapsibleRows={fundExtraRows.map(([ft, v]) => ({
+                                    label: ft,
+                                    value: fmtPHP(v.allotment),
+                                }))}
                             />
                             {/* Card 2 — Obligation (NCA) */}
                             <FinancialCard
                                 title="NCA Issued (Obligation)"
                                 accentClass="border-t-cyan-500"
                                 rows={[
-                                    ...classRows.map(([code, v]) => ({
-                                        label: code,
+                                    ...fundRows.map(([ft, v]) => ({
+                                        label: ft,
                                         value: fmtPHP(v.obligation),
                                         barPct: pct(v.obligation, v.allotment),
                                     })),
@@ -888,6 +982,11 @@ export default function Dashboard() {
                                         barPct: pct(totalObligation, totalAllotment),
                                     },
                                 ]}
+                                collapsibleRows={fundExtraRows.map(([ft, v]) => ({
+                                    label: ft,
+                                    value: fmtPHP(v.obligation),
+                                    barPct: pct(v.obligation, v.allotment),
+                                }))}
                             />
                             {/* Card 3 — Available Balance */}
                             <FinancialCard
