@@ -191,7 +191,7 @@ export default function ProjectDetailPanel({ programName, programCode, raodRecor
                                                 </div>
                                                 <div className="border-t border-border/50 px-4 py-2 flex justify-end">
                                                     <button
-                                                        onClick={() => { navigate('/efas-v1/saro', { state: { openSaroNo: saroNo, expandSaroNo: saroNo } }); onClose() }}
+                                                        onClick={() => { navigate('/efas-v1/raod', { state: { openSaroNo: saroNo } }); onClose() }}
                                                         className="flex items-center gap-1 text-[10px] text-primary hover:underline font-gmedium"
                                                     >
                                                         View in RAOD <ChevronRight size={10} />
@@ -205,17 +205,17 @@ export default function ProjectDetailPanel({ programName, programCode, raodRecor
                         )}
 
                         {/* ── Navigate to full RAOD report ─────────────────── */}
-                        {uniqueSaroNos.length > 0 && (
-                            <button
-                                onClick={() => {
-                                    navigate('/efas-v1/saro', { state: { openSaroNo: uniqueSaroNos[0] } })
-                                    onClose()
-                                }}
-                                className="self-end flex items-center gap-1.5 text-xs text-primary hover:underline font-gmedium"
-                            >
-                                View Full Report in RAOD <ChevronRight size={11} />
-                            </button>
-                        )}
+                        <button
+                            onClick={() => {
+                                navigate('/efas-v1/raod', {
+                                    state: uniqueSaroNos.length > 0 ? { openSaroNo: uniqueSaroNos[0] } : undefined
+                                })
+                                onClose()
+                            }}
+                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-gsemibold transition"
+                        >
+                            View All Reports in RAOD <ChevronRight size={13} />
+                        </button>
                     </div>
                 )}
             </div>

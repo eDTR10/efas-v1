@@ -24,33 +24,33 @@ function fmtDate(d: string): string {
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
-function thinBorder(): Partial<ExcelJS.Borders> {
-    const s: ExcelJS.BorderStyle = { style: 'thin' }
+function thinBorder(): any {
+    const s: any = { style: 'thin' }
     return { top: s, bottom: s, left: s, right: s }
 }
 
-function medBorder(): Partial<ExcelJS.Borders> {
-    const s: ExcelJS.BorderStyle = { style: 'medium' }
+function medBorder(): any {
+    const s: any = { style: 'medium' }
     return { top: s, bottom: s, left: s, right: s }
 }
 
-function centerAlign(wrap = false): Partial<ExcelJS.Alignment> {
+function centerAlign(wrap = false): any {
     return { horizontal: 'center', vertical: 'middle', wrapText: wrap }
 }
 
-function leftAlign(wrap = false): Partial<ExcelJS.Alignment> {
+function leftAlign(wrap = false): any {
     return { horizontal: 'left', vertical: 'middle', wrapText: wrap }
 }
 
-function rightAlign(): Partial<ExcelJS.Alignment> {
+function rightAlign(): any {
     return { horizontal: 'right', vertical: 'middle' }
 }
 
-function boldFont(size = 10, name = 'Times New Roman'): Partial<ExcelJS.Font> {
+function boldFont(size = 10, name = 'Times New Roman'): any {
     return { bold: true, size, name }
 }
 
-function normalFont(size = 10, name = 'Times New Roman'): Partial<ExcelJS.Font> {
+function normalFont(size = 10, name = 'Times New Roman'): any {
     return { size, name }
 }
 

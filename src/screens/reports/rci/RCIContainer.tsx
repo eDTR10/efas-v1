@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Plus, Pencil, Trash2, Search, X, FileSpreadsheet } from 'lucide-react'
 import type { RciEntry } from '../types'
 import AddRciDialog from './AddRciDialog'

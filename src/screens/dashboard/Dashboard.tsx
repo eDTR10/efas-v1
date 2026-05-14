@@ -7,8 +7,10 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts'
-import { FileText, Search, TrendingUp, Layers, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileText, Search, TrendingUp, Layers, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import efasApi from '@/plugin/axios'
+import ProjectDetailPanel from './ProjectDetailPanel'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,30 @@ interface ReceivedSARO {
     items: ReceivedSAROItem[]
     created_at: string
     updated_at: string
+}
+
+interface RAODEntry {
+    id: number
+    obligated_amount: string
+    total_disbursed: string
+    balance: string
+    class_type: string
+    fund_type_description: string
+    name_of_claimant: string
+    ors_no: string
+    date_of_obligation: string | null
+    particulars: string
+    cash: string
+    non_tra: string
+}
+
+interface RAODRecord {
+    id: number
+    pap_name: string
+    pap_code: string
+    saro_no: string
+    amount_of_allotment: string
+    entries: RAODEntry[]
 }
 
 /** Derived per-PAP aggregate */
@@ -85,7 +111,7 @@ function FinancialCard({
     title, rows, accentClass, onClick,
 }: {
     title: string
-    rows: { label: string; value: string; highlight?: boolean; color?: string; sub?: string }[]
+    rows: { label: string; value: string; highlight?: boolean; color?: string; sub?: string; barPct?: number }[]
     accentClass: string  // e.g. 'border-t-blue-500'
     onClick?: () => void
 }) {
@@ -102,17 +128,32 @@ function FinancialCard({
                 {rows.map((row, i) => (
                     <div
                         key={i}
-                        className={`flex items-baseline justify-between ${row.highlight ? 'pt-2 mt-2 border-t border-border/50' : 'py-0.5'}`}
+                        className={`${row.highlight ? 'pt-2 mt-2 border-t border-border/50' : 'py-0.5'}`}
                     >
-                        <span className={`text-[10px] font-gbold uppercase tracking-wide ${row.highlight ? 'text-foreground/70' : 'text-muted-foreground'}`}>
-                            {row.label}
-                        </span>
-                        <div className="text-right">
-                            <span className={`font-gbold tabular-nums ${row.highlight ? 'text-xl' : 'text-sm'} ${row.color ?? 'text-foreground'}`}>
-                                {row.value}
+                        <div className="flex items-baseline justify-between">
+                            <span className={`text-[10px] font-gbold uppercase tracking-wide ${row.highlight ? 'text-foreground/70' : 'text-muted-foreground'}`}>
+                                {row.label}
                             </span>
-                            {row.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{row.sub}</p>}
+                            <div className="text-right">
+                                <span className={`font-gbold tabular-nums ${row.highlight ? 'text-xl' : 'text-sm'} ${row.color ?? 'text-foreground'}`}>
+                                    {row.value}
+                                </span>
+                                {row.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{row.sub}</p>}
+                            </div>
                         </div>
+                        {row.barPct !== undefined && (
+                            <div className="mt-1.5 flex items-center gap-2">
+                                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-500 ${row.barPct >= 80 ? 'bg-green-500' : row.barPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`}
+                                        style={{ width: `${Math.min(100, Math.max(0, row.barPct))}%` }}
+                                    />
+                                </div>
+                                <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
+                                    {row.barPct.toFixed(0)}%
+                                </span>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -182,8 +223,8 @@ function Pagination({ page, total, pageSize, onChange }: {
                                 key={p}
                                 onClick={() => onChange(p as number)}
                                 className={`h-7 min-w-[28px] px-1.5 rounded-md text-[11px] font-gbold border transition ${page === p
-                                        ? 'bg-primary text-primary-foreground border-primary'
-                                        : 'border-border text-muted-foreground hover:bg-muted'
+                                    ? 'bg-primary text-primary-foreground border-primary'
+                                    : 'border-border text-muted-foreground hover:bg-muted'
                                     }`}
                             >{p}</button>
                     )
@@ -248,7 +289,7 @@ function FinancialStatusOverview({ stats }: { stats: PAPStat[] }) {
 
 const PAP_PAGE_SIZE = 5
 
-function ProgramPerformanceCard({ stats }: { stats: PAPStat[] }) {
+function ProgramPerformanceCard({ stats, onSelectPap }: { stats: PAPStat[]; onSelectPap: (s: PAPStat) => void }) {
     const [search, setSearch] = useState('')
     const [utilFilter, setUtilFilter] = useState<'All' | 'High' | 'Medium' | 'Low'>('All')
     const [page, setPage] = useState(1)
@@ -312,14 +353,18 @@ function ProgramPerformanceCard({ stats }: { stats: PAPStat[] }) {
                             return (
                                 <div
                                     key={stat.name}
-                                    className="border border-border rounded-xl px-4 py-3 bg-background"
+                                    className="border border-border rounded-xl px-4 py-3 bg-background cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors group"
+                                    onClick={() => onSelectPap(stat)}
                                 >
                                     <div className="flex items-start gap-3 mb-2.5">
                                         <span className="shrink-0 w-6 h-6 rounded-md bg-primary/10 text-primary text-[11px] font-gbold flex items-center justify-center mt-0.5">
                                             {globalRank}
                                         </span>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-gbold text-foreground truncate leading-snug">{stat.name}</p>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-xs font-gbold text-foreground truncate leading-snug">{stat.name}</p>
+                                                <ExternalLink size={11} className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                                            </div>
                                             <div className="flex items-center justify-between mt-0.5">
                                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Allotment</span>
                                                 <span className="text-[11px] font-gbold text-foreground">{fmtPHP(stat.allotment)}</span>
@@ -486,24 +531,174 @@ function ActiveTrackingCard({ saros }: { saros: ReceivedSARO[] }) {
     )
 }
 
+// ─── RAOD Financial Overview ──────────────────────────────────────────────────
+
+function PctBar({ value, color }: { value: number; color: string }) {
+    return (
+        <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+            <div
+                className={`h-full rounded-full transition-all duration-700 ${color}`}
+                style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+            />
+        </div>
+    )
+}
+
+function RAODOverview({ raods, onNavigateRaod }: { raods: RAODRecord[]; onNavigateRaod: (saroNo: string) => void }) {
+    const totalAllotment = raods.reduce((s, r) => s + (parseN(r.amount_of_allotment)), 0)
+    const allEntries = raods.flatMap(r => r.entries)
+    const totalObligated = allEntries.reduce((s, e) => s + parseN(e.obligated_amount), 0)
+    const totalDisbursed = allEntries.reduce((s, e) => s + parseN(e.total_disbursed), 0)
+    const totalBalance = allEntries.reduce((s, e) => s + parseN(e.balance), 0)
+    const obligatedPct = totalAllotment > 0 ? (totalObligated / totalAllotment) * 100 : 0
+    const disbursedPct = totalObligated > 0 ? (totalDisbursed / totalObligated) * 100 : 0
+    const uniqueSaros = new Set(raods.map(r => r.saro_no)).size
+
+    return (
+        <div className="flex flex-col gap-5">
+            {/* Stat cards */}
+            <div className="grid grid-cols-4 gap-4 xxslg:grid-cols-2 sm:grid-cols-1">
+                {/* Allotment */}
+                <div className="bg-card border border-border border-t-2 border-t-blue-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                    <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Allotment</p>
+                    <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalAllotment)}</p>
+                    <p className="text-[11px] text-muted-foreground">{raods.length} RAOD{raods.length !== 1 ? 's' : ''} · {uniqueSaros} SARO{uniqueSaros !== 1 ? 's' : ''}</p>
+                </div>
+                {/* Obligated */}
+                <div className="bg-card border border-border border-t-2 border-t-orange-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Obligated</p>
+                        <span className={`text-xs font-gbold ${obligatedPct >= 80 ? 'text-green-500' : obligatedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
+                            {obligatedPct.toFixed(1)}%
+                        </span>
+                    </div>
+                    <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalObligated)}</p>
+                    <PctBar value={obligatedPct} color={obligatedPct >= 80 ? 'bg-green-500' : obligatedPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'} />
+                    <p className="text-[10px] text-muted-foreground">of allotment</p>
+                </div>
+                {/* Disbursed */}
+                <div className="bg-card border border-border border-t-2 border-t-green-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Disbursed</p>
+                        <span className={`text-xs font-gbold ${disbursedPct >= 80 ? 'text-green-500' : disbursedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
+                            {disbursedPct.toFixed(1)}%
+                        </span>
+                    </div>
+                    <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalDisbursed)}</p>
+                    <PctBar value={disbursedPct} color={disbursedPct >= 80 ? 'bg-green-500' : disbursedPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'} />
+                    <p className="text-[10px] text-muted-foreground">of obligated</p>
+                </div>
+                {/* Balance */}
+                <div className="bg-card border border-border border-t-2 border-t-violet-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                    <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Remaining Balance</p>
+                    <p className={`text-2xl font-gbold tabular-nums ${totalBalance < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                        {fmtPHP(Math.abs(totalBalance))}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Obligated − Disbursed</p>
+                </div>
+            </div>
+
+            {/* Per-RAOD breakdown table */}
+            {raods.length > 0 && (
+                <div className="overflow-x-auto border border-border rounded-xl">
+                    <table className="w-full text-xs border-collapse">
+                        <thead>
+                            <tr className="border-b border-border bg-muted/30">
+                                <th className="text-left px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">PAP / SARO</th>
+                                <th className="text-right px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Allotment</th>
+                                <th className="text-right px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Obligated</th>
+                                <th className="px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest min-w-[120px]">Oblig %</th>
+                                <th className="text-right px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Disbursed</th>
+                                <th className="px-3 py-2.5 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest min-w-[120px]">Disb %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {raods.slice(0, 10).map(r => {
+                                const allot = parseN(r.amount_of_allotment)
+                                const oblig = r.entries.reduce((s, e) => s + parseN(e.obligated_amount), 0)
+                                const disb = r.entries.reduce((s, e) => s + parseN(e.total_disbursed), 0)
+                                const op = allot > 0 ? (oblig / allot) * 100 : 0
+                                const dp = oblig > 0 ? (disb / oblig) * 100 : 0
+                                return (
+                                    <tr
+                                        key={r.id}
+                                        className="border-b border-border/40 last:border-0 hover:bg-primary/5 transition-colors cursor-pointer group"
+                                        onClick={() => onNavigateRaod(r.saro_no)}
+                                    >
+                                        <td className="px-3 py-2.5 max-w-[240px]">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="min-w-0">
+                                                    <p className="font-gbold text-foreground truncate group-hover:text-primary transition-colors">{r.pap_name || '—'}</p>
+                                                    <p className="text-[10px] text-muted-foreground truncate">{r.saro_no}</p>
+                                                </div>
+                                                <ExternalLink size={11} className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors ml-1" />
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-gbold tabular-nums text-foreground whitespace-nowrap">{fmtPHP(allot)}</td>
+                                        <td className="px-3 py-2.5 text-right font-gbold tabular-nums text-foreground whitespace-nowrap">{fmtPHP(oblig)}</td>
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                                    <div className={`h-full rounded-full ${op >= 80 ? 'bg-green-500' : op >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, op)}%` }} />
+                                                </div>
+                                                <span className={`text-[10px] font-gbold w-9 text-right ${op >= 80 ? 'text-green-500' : op >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>{op.toFixed(0)}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-gbold tabular-nums text-foreground whitespace-nowrap">{fmtPHP(disb)}</td>
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                                    <div className={`h-full rounded-full ${dp >= 80 ? 'bg-green-500' : dp >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, dp)}%` }} />
+                                                </div>
+                                                <span className={`text-[10px] font-gbold w-9 text-right ${dp >= 80 ? 'text-green-500' : dp >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>{dp.toFixed(0)}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                    {raods.length > 10 && (
+                        <p className="text-[11px] text-muted-foreground text-center py-2 border-t border-border">
+                            Showing top 10 of {raods.length} RAODs —{' '}
+                            <button
+                                onClick={() => onNavigateRaod('')}
+                                className="text-primary hover:underline font-gmedium"
+                            >view all in RAOD</button>
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
 // ─── Main Dashboard ──────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+    const navigate = useNavigate()
     const [saros, setSaros] = useState<ReceivedSARO[]>([])
+    const [raods, setRaods] = useState<RAODRecord[]>([])
     const [loading, setLoading] = useState(true)
     const [filterClass, setFilterClass] = useState<string>('All')
+    const [filterPap, setFilterPap] = useState<string>('All')
+    const [selectedPapStat, setSelectedPapStat] = useState<PAPStat | null>(null)
 
     useEffect(() => {
-        efasApi.get('received-saro/')
-            .then(r => setSaros(r.data))
-            .finally(() => setLoading(false))
+        Promise.allSettled([
+            efasApi.get('received-saro/'),
+            efasApi.get('raod/'),
+        ]).then(([saroRes, raodRes]) => {
+            if (saroRes.status === 'fulfilled') setSaros(saroRes.value.data)
+            if (raodRes.status === 'fulfilled') setRaods(raodRes.value.data)
+        }).finally(() => setLoading(false))
     }, [])
 
     // ── All items flattened ────────────────────────────────────────────────────
     const allItems = saros.flatMap(s => s.items)
 
     // ── Filter by class type ───────────────────────────────────────────────────
-    const filteredSaros = filterClass === 'All'
+    const classSaros = filterClass === 'All'
         ? saros
         : saros.filter(s => s.class_type === filterClass || s.items.some(i => i.class_type === filterClass))
 
@@ -512,6 +707,18 @@ export default function Dashboard() {
         ...saros.map(s => s.class_type).filter(Boolean),
         ...allItems.map(i => i.class_type).filter(Boolean),
     ])].sort()
+
+    // ── PAP / Project options for dropdown (from class-filtered saros) ─────────
+    const papOptions = [...new Map(
+        classSaros.flatMap(s => s.items)
+            .filter(i => i.pap_code)
+            .map(i => [i.pap_code, { code: i.pap_code, name: i.pap_name || i.pap_code }])
+    ).values()].sort((a, b) => a.name.localeCompare(b.name))
+
+    // ── Filter by PAP / Project ────────────────────────────────────────────────
+    const filteredSaros = filterPap === 'All'
+        ? classSaros
+        : classSaros.filter(s => s.items.some(i => i.pap_code === filterPap))
 
     // ── Totals ─────────────────────────────────────────────────────────────────
     const totalAllotment = filteredSaros.reduce((s, r) => s + parseN(r.total_amount), 0)
@@ -559,8 +766,42 @@ export default function Dashboard() {
     })
     const papStats = Array.from(papMap.values()).filter(p => p.allotment > 0 || p.obligation > 0)
 
+    // ── RAOD records for detail panel ─────────────────────────────────────────
+    const raodRecordsForPanel = selectedPapStat
+        ? raods
+            .filter(r => r.pap_code === selectedPapStat.code)
+            .flatMap(r => r.entries.map(e => ({
+                id: e.id,
+                saro_no: r.saro_no,
+                pap: r.pap_code,
+                pap_code: r.pap_code,
+                amount_of_allotment: r.amount_of_allotment,
+                name_of_claimant: e.name_of_claimant,
+                date_of_obligation: e.date_of_obligation,
+                ors_no: e.ors_no,
+                obligated_amount: e.obligated_amount,
+                cash: e.cash,
+                non_tra: e.non_tra,
+                particulars: e.particulars,
+                class_type_detail: null as null,
+                fund_source_detail: null as null,
+            })))
+        : []
+
+    const navigateToRaod = (saroNo: string) => {
+        navigate('/efas-v1/raod', { state: saroNo ? { openSaroNo: saroNo } : undefined })
+    }
+
     return (
         <>
+            {selectedPapStat && (
+                <ProjectDetailPanel
+                    programName={selectedPapStat.name}
+                    programCode={selectedPapStat.code}
+                    raodRecords={raodRecordsForPanel}
+                    onClose={() => setSelectedPapStat(null)}
+                />
+            )}
             <div className="flex flex-col gap-5">
                 {/* ── Header ── */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -570,19 +811,38 @@ export default function Dashboard() {
                             Financial overview — DICT Regional Office 10
                         </p>
                     </div>
-                    {!loading && classTypes.length > 0 && (
-                        <div className="flex items-center gap-2 shrink-0 mt-1">
-                            <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Filter by class:</span>
-                            <select
-                                value={filterClass}
-                                onChange={e => setFilterClass(e.target.value)}
-                                className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                                <option value="All">All Classes</option>
-                                {classTypes.map(ct => (
-                                    <option key={ct} value={ct}>{ct}</option>
-                                ))}
-                            </select>
+                    {!loading && (classTypes.length > 0 || papOptions.length > 0) && (
+                        <div className="flex items-center gap-3 flex-wrap shrink-0 mt-1">
+                            {classTypes.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Class:</span>
+                                    <select
+                                        value={filterClass}
+                                        onChange={e => { setFilterClass(e.target.value); setFilterPap('All') }}
+                                        className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                        <option value="All">All Classes</option>
+                                        {classTypes.map(ct => (
+                                            <option key={ct} value={ct}>{ct}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {papOptions.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Project:</span>
+                                    <select
+                                        value={filterPap}
+                                        onChange={e => setFilterPap(e.target.value)}
+                                        className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary max-w-[220px] truncate"
+                                    >
+                                        <option value="All">All Projects</option>
+                                        {papOptions.map(p => (
+                                            <option key={p.code} value={p.code}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -617,6 +877,7 @@ export default function Dashboard() {
                                     ...classRows.map(([code, v]) => ({
                                         label: code,
                                         value: fmtPHP(v.obligation),
+                                        barPct: pct(v.obligation, v.allotment),
                                     })),
                                     {
                                         label: 'Consolidated',
@@ -624,6 +885,7 @@ export default function Dashboard() {
                                         highlight: true,
                                         color: 'text-cyan-500',
                                         sub: `${pct(totalObligation, totalAllotment)}% of allotment`,
+                                        barPct: pct(totalObligation, totalAllotment),
                                     },
                                 ]}
                             />
@@ -639,12 +901,14 @@ export default function Dashboard() {
                                     {
                                         label: 'Less: NCA Issued',
                                         value: fmtPHP(totalObligation),
+                                        barPct: pct(totalObligation, totalAllotment),
                                     },
                                     {
                                         label: 'Balance',
                                         value: fmtPHP(Math.max(0, totalBalance)),
                                         highlight: true,
                                         color: totalBalance < 0 ? 'text-destructive' : 'text-green-500',
+                                        barPct: pct(Math.max(0, totalBalance), totalAllotment),
                                     },
                                     {
                                         label: 'Total Line-Item Amount',
@@ -675,6 +939,7 @@ export default function Dashboard() {
                                         value: fmtPHP(Math.max(0, totalBalance)),
                                         highlight: true,
                                         color: totalBalance < 0 ? 'text-destructive' : 'text-amber-500',
+                                        barPct: pct(Math.max(0, totalBalance), totalAllotment),
                                     },
                                 ]}
                             />
@@ -685,7 +950,7 @@ export default function Dashboard() {
                         {/* ── Row 2: PAP Performance + Tracking Table ── */}
                         <div className="grid grid-cols-2 gap-4 xslg:grid-cols-1">
                             <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
-                                <ProgramPerformanceCard stats={papStats} />
+                                <ProgramPerformanceCard stats={papStats} onSelectPap={setSelectedPapStat} />
                             </div>
                             <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
                                 <ActiveTrackingCard saros={filteredSaros} />
@@ -708,6 +973,21 @@ export default function Dashboard() {
                             </div>
                             <FinancialStatusOverview stats={papStats} />
                         </div>
+
+                        {/* ── Row 4: RAOD Obligation & Disbursement ── */}
+                        {raods.length > 0 && (
+                            <div className="bg-card border border-border rounded-xl p-5">
+                                <div className="flex items-start justify-between mb-5">
+                                    <SectionHeader
+                                        title="Obligation & Disbursement"
+                                        sub="Based on RAOD — allotment, obligation and disbursement percentages"
+                                        icon={TrendingUp}
+                                    />
+                                    <RealtimeBadge />
+                                </div>
+                                <RAODOverview raods={raods} onNavigateRaod={navigateToRaod} />
+                            </div>
+                        )}
                     </>
                 )}
             </div>

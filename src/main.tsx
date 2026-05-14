@@ -8,12 +8,11 @@ import NotFound from "./screens/notFound";
 import LoginPage from "./screens/auth/LoginPage";
 import AppLayout from "./screens/dashboard/AppLayout";
 import {
-  DashboardPage,
-  RaodPage,
   ReportsPage,
-  AuditTrailPage,
-  UserManagementPage,
 } from "./screens/dashboard/StubPages";
+import UserManagementContainer from './screens/user_management/UserManagementContainer';
+import AuditTrailContainer from './screens/audit_trail/AuditTrailContainer';
+import RAODMainContainer from './screens/raod/RAODMainContainer';
 import ReceivedSaroMainContainer from "./screens/received_saro/ReceivedSaroMainContainer";
 import EfasSettingsContainer from './screens/settings/EfasSettingsContainer';
 import Dashboard from './screens/dashboard/Dashboard';
@@ -33,12 +32,12 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: "dashboard", element: <Dashboard /> },
-      { path: "raod", element: <RaodPage /> },
+      { path: "raod", element: <RAODMainContainer /> },
       { path: "received-saro", element: <ReceivedSaroMainContainer /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "settings", element: <EfasSettingsContainer /> },
-      { path: "audit-trail", element: <AuditTrailPage /> },
-      { path: "user-management", element: <UserManagementPage /> },
+      { path: "audit-trail", element: <AuditTrailContainer /> },
+      { path: "user-management", element: <UserManagementContainer /> },
     ],
   },
   {

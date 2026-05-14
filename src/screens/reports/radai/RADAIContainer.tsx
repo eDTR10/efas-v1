@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import {  useRef, useState } from 'react'
 import { Plus, Pencil, Trash2, Search, X, FileSpreadsheet } from 'lucide-react'
 import type { RadaiEntry } from '../types'
 import AddRadaiDialog from './AddRadaiDialog'

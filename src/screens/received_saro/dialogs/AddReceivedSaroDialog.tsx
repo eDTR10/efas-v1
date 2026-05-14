@@ -54,7 +54,7 @@ const emptyItem = (): ItemForm => ({
 })
 
 const inp = 'w-full rounded-md bg-background border border-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition'
-const rowInp = 'w-full rounded border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition'
+// const rowInp = 'w-full rounded border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition'
 
 // Strip thousand-separators so Django accepts values like "553,147.20"
 const stripNum = (v: string) => v.replace(/,/g, '') || '0'
