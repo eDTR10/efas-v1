@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo } from 'react'
+import { useDragScroll } from '@/hooks/useDragScroll'
 import { X, CheckCircle2, AlertCircle, Loader2, Trash2, UploadCloud, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import efasApi from '@/plugin/axios'
@@ -94,6 +95,7 @@ const rowInp = 'w-full rounded border border-input bg-background px-1.5 py-0.5 t
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, receivedSaros, onClose, onDone }: Props) {
+    const dragScroll = useDragScroll<HTMLDivElement>()
 
     const [rows, setRows] = useState<BulkRow[]>([])
     const [parsed, setParsed] = useState(false)
@@ -479,7 +481,7 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
                             )}
 
                             {/* Editable table */}
-                            <div className="overflow-x-auto border border-border rounded-xl">
+                            <div ref={dragScroll.ref} onMouseDown={dragScroll.onMouseDown} onMouseMove={dragScroll.onMouseMove} onMouseUp={dragScroll.onMouseUp} onMouseLeave={dragScroll.onMouseLeave} className="overflow-x-auto border border-border rounded-xl cursor-grab">
                                 <table className="min-w-full text-xs border-collapse">
                                     <thead>
                                         <tr className="bg-primary">

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useDragScroll } from '@/hooks/useDragScroll'
 import { X, CheckCircle2, AlertCircle, Loader2, Trash2, UploadCloud, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import efasApi from '@/plugin/axios'
@@ -121,26 +122,26 @@ type HeaderMap = Partial<Record<RowField, number>>
  */
 const HEADER_RULES: [Exclude<RowField, 'amount'>, (c: string) => boolean][] = [
     ['date_recd_in_email', c => (c.includes('recd') || c.includes('received')) && (c.includes('email') || c.includes('date'))],
-    ['date_of_saro',       c => c.includes('date') && c.includes('saro')],
-    ['allotment_no',       c => c.includes('allotment')],
+    ['date_of_saro', c => c.includes('date') && c.includes('saro')],
+    ['allotment_no', c => c.includes('allotment')],
     // "CLASS" (no "type") → saro_class; "CLASS TYPE" → class_type
-    ['saro_class',         c => c.includes('class') && !c.includes('type') && !c.includes('item')],
-    ['notes_validity',     c => c.includes('notes') || c.includes('validity')],
+    ['saro_class', c => c.includes('class') && !c.includes('type') && !c.includes('item')],
+    ['notes_validity', c => c.includes('notes') || c.includes('validity')],
     // "Total Amount" explicit; plain "Amount" before pap_code is handled in detectHeaderMap
-    ['total_amount',       c => c.includes('total') && c.includes('amount')],
+    ['total_amount', c => c.includes('total') && c.includes('amount')],
     // Only "PAP CODE", not "PAP NAME" (PAP NAME → description below)
-    ['pap_code',           c => c.includes('pap') && c.includes('code')],
+    ['pap_code', c => c.includes('pap') && c.includes('code')],
     // "Description" or "PAP NAME"
-    ['description',        c => (c.includes('descri') && !c.includes('obj')) || (c.includes('pap') && c.includes('name'))],
-    ['class_type',         c => c.includes('class') && c.includes('type')],
-    ['fund_type',          c => c.includes('fund')],
-    ['object_code_no',     c => c.includes('obj') && !c.includes('desc') && (c.includes('no') || c.includes('num') || c.includes('code'))],
-    ['object_code_desc',   c => c.includes('obj') && c.includes('desc')],
-    ['nca_amount',         c => c.includes('nca') && c.includes('amount')],
+    ['description', c => (c.includes('descri') && !c.includes('obj')) || (c.includes('pap') && c.includes('name'))],
+    ['class_type', c => c.includes('class') && c.includes('type')],
+    ['fund_type', c => c.includes('fund')],
+    ['object_code_no', c => c.includes('obj') && !c.includes('desc') && (c.includes('no') || c.includes('num') || c.includes('code'))],
+    ['object_code_desc', c => c.includes('obj') && c.includes('desc')],
+    ['nca_amount', c => c.includes('nca') && c.includes('amount')],
     // "NCA DATE" or standalone "DATE" column (common in SARO sheets)
-    ['nca_date',           c => (c.includes('nca') && c.includes('date')) || c === 'date'],
-    ['nta_no',             c => c.includes('nta')],
-    ['purpose',            c => c.includes('purpose')],
+    ['nca_date', c => (c.includes('nca') && c.includes('date')) || c === 'date'],
+    ['nta_no', c => c.includes('nta')],
+    ['purpose', c => c.includes('purpose')],
 ]
 
 function detectHeaderMap(cells: string[], offset: number): HeaderMap | null {
@@ -168,8 +169,8 @@ function detectHeaderMap(cells: string[], offset: number): HeaderMap | null {
         // A column AFTER object codes is the line-item amount
         const anchorRight = Math.max(map['object_code_desc'] ?? -1, map['object_code_no'] ?? -1)
 
-        const beforePap  = amtCandidates.find(({ i }) => i < anchorLeft)
-        const afterObj   = amtCandidates.find(({ i }) => i > anchorRight)
+        const beforePap = amtCandidates.find(({ i }) => i < anchorLeft)
+        const afterObj = amtCandidates.find(({ i }) => i > anchorRight)
 
         if (beforePap && !map['total_amount']) map['total_amount'] = beforePap.i
         if (afterObj) map['amount'] = afterObj.i
@@ -224,22 +225,22 @@ function buildBulkRows(allRows: string[][]): BulkRow[] {
 
             result.push({
                 date_recd_in_email: parseDate(get('date_recd_in_email')),
-                date_of_saro:       parseDate(get('date_of_saro')),
-                allotment_no:       allotmentNo,
-                saro_class:         get('saro_class'),
-                notes_validity:     get('notes_validity'),
-                total_amount:       get('total_amount'),
-                pap_code:           get('pap_code'),
-                description:        get('description'),
-                class_type:         get('class_type'),
-                fund_type:          get('fund_type'),
-                object_code_no:     get('object_code_no'),
-                object_code_desc:   get('object_code_desc'),
-                amount:             get('amount'),
-                purpose:            get('purpose'),
-                nca_amount:         get('nca_amount'),
-                nca_date:           parseDate(get('nca_date')),
-                nta_no:             get('nta_no'),
+                date_of_saro: parseDate(get('date_of_saro')),
+                allotment_no: allotmentNo,
+                saro_class: get('saro_class'),
+                notes_validity: get('notes_validity'),
+                total_amount: get('total_amount'),
+                pap_code: get('pap_code'),
+                description: get('description'),
+                class_type: get('class_type'),
+                fund_type: get('fund_type'),
+                object_code_no: get('object_code_no'),
+                object_code_desc: get('object_code_desc'),
+                amount: get('amount'),
+                purpose: get('purpose'),
+                nca_amount: get('nca_amount'),
+                nca_date: parseDate(get('nca_date')),
+                nta_no: get('nta_no'),
                 status: 'pending',
             })
         } else {
@@ -250,22 +251,22 @@ function buildBulkRows(allRows: string[][]): BulkRow[] {
             if (!g(2)) continue // no allotment_no at expected position → skip
             result.push({
                 date_recd_in_email: parseDate(g(0)),
-                date_of_saro:       parseDate(g(1)),
-                allotment_no:       g(2),
-                saro_class:         g(3),
-                notes_validity:     g(4),
-                total_amount:       g(5),
-                pap_code:           g(6),
-                description:        g(7),
-                class_type:         g(8),
-                fund_type:          g(9),
-                object_code_no:     g(10),
-                object_code_desc:   g(11),
-                amount:             g(12),
-                purpose:            g(13),
-                nca_amount:         g(14),
-                nca_date:           parseDate(g(15)),
-                nta_no:             g(16),
+                date_of_saro: parseDate(g(1)),
+                allotment_no: g(2),
+                saro_class: g(3),
+                notes_validity: g(4),
+                total_amount: g(5),
+                pap_code: g(6),
+                description: g(7),
+                class_type: g(8),
+                fund_type: g(9),
+                object_code_no: g(10),
+                object_code_desc: g(11),
+                amount: g(12),
+                purpose: g(13),
+                nca_amount: g(14),
+                nca_date: parseDate(g(15)),
+                nta_no: g(16),
                 status: 'pending',
             })
         }
@@ -280,6 +281,7 @@ const ACCEPTED = '.xlsx,.xls,.csv,.tsv,.txt'
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BulkImportSaroDialog({ paps, onClose, onDone }: Props) {
+    const dragScroll = useDragScroll<HTMLDivElement>()
     const [rawText, setRawText] = useState('')
     const [rows, setRows] = useState<BulkRow[]>([])
     const [parsed, setParsed] = useState(false)
@@ -624,56 +626,56 @@ export default function BulkImportSaroDialog({ paps, onClose, onDone }: Props) {
                             )}
 
                             {rows.length > 0 && (
-                            <div className="overflow-x-auto rounded-lg border border-border">
-                                <table className="w-full text-xs border-collapse">
-                                    <thead>
-                                        <tr className="bg-muted/40 border-b border-border text-muted-foreground uppercase sticky top-0">
-                                            <th className="px-2 py-2 text-left w-6">#</th>
-                                            {COLS.map(c => (
-                                                <th key={c.key} className={`px-2 py-2 text-left whitespace-nowrap ${c.width}`}>{c.label}</th>
-                                            ))}
-                                            <th className="px-2 py-2 text-left min-w-[100px]">Status</th>
-                                            <th className="px-2 py-2 w-6"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {rows.map((row, idx) => (
-                                            <tr key={idx} className={`border-b border-border last:border-0 ${row.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
-                                                row.status === 'error' ? 'bg-red-50 dark:bg-red-950/20' : ''
-                                                }`}>
-                                                <td className="px-2 py-1 text-muted-foreground">{idx + 1}</td>
+                                <div ref={dragScroll.ref} onMouseDown={dragScroll.onMouseDown} onMouseMove={dragScroll.onMouseMove} onMouseUp={dragScroll.onMouseUp} onMouseLeave={dragScroll.onMouseLeave} className="overflow-x-auto rounded-lg border border-border cursor-grab">
+                                    <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                            <tr className="bg-muted/40 border-b border-border text-muted-foreground uppercase sticky top-0">
+                                                <th className="px-2 py-2 text-left w-6">#</th>
                                                 {COLS.map(c => (
-                                                    <td key={c.key} className={`px-2 py-1 ${c.width}`}>
-                                                        <input
-                                                            value={row[c.key]}
-                                                            onChange={e => updateRow(idx, c.key, e.target.value)}
-                                                            disabled={row.status === 'success' || importing}
-                                                            className={rowInp}
-                                                        />
-                                                    </td>
+                                                    <th key={c.key} className={`px-2 py-2 text-left whitespace-nowrap ${c.width}`}>{c.label}</th>
                                                 ))}
-                                                <td className="px-2 py-1 whitespace-nowrap">
-                                                    {row.status === 'pending' && <span className="text-muted-foreground">Pending</span>}
-                                                    {row.status === 'success' && <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={12} /> Saved</span>}
-                                                    {row.status === 'error' && (
-                                                        <span className="flex items-center gap-1 text-destructive" title={row.error}>
-                                                            <AlertCircle size={12} /> {row.error?.slice(0, 24)}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-1">
-                                                    {row.status !== 'success' && (
-                                                        <button type="button" onClick={() => removeRow(idx)} disabled={importing}
-                                                            className="text-muted-foreground hover:text-destructive transition disabled:opacity-40">
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                    )}
-                                                </td>
+                                                <th className="px-2 py-2 text-left min-w-[100px]">Status</th>
+                                                <th className="px-2 py-2 w-6"></th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {rows.map((row, idx) => (
+                                                <tr key={idx} className={`border-b border-border last:border-0 ${row.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
+                                                    row.status === 'error' ? 'bg-red-50 dark:bg-red-950/20' : ''
+                                                    }`}>
+                                                    <td className="px-2 py-1 text-muted-foreground">{idx + 1}</td>
+                                                    {COLS.map(c => (
+                                                        <td key={c.key} className={`px-2 py-1 ${c.width}`}>
+                                                            <input
+                                                                value={row[c.key]}
+                                                                onChange={e => updateRow(idx, c.key, e.target.value)}
+                                                                disabled={row.status === 'success' || importing}
+                                                                className={rowInp}
+                                                            />
+                                                        </td>
+                                                    ))}
+                                                    <td className="px-2 py-1 whitespace-nowrap">
+                                                        {row.status === 'pending' && <span className="text-muted-foreground">Pending</span>}
+                                                        {row.status === 'success' && <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={12} /> Saved</span>}
+                                                        {row.status === 'error' && (
+                                                            <span className="flex items-center gap-1 text-destructive" title={row.error}>
+                                                                <AlertCircle size={12} /> {row.error?.slice(0, 24)}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-1">
+                                                        {row.status !== 'success' && (
+                                                            <button type="button" onClick={() => removeRow(idx)} disabled={importing}
+                                                                className="text-muted-foreground hover:text-destructive transition disabled:opacity-40">
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
 
                             <div className="flex items-center justify-between pt-1 shrink-0">

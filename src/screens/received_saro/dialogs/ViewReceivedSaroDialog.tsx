@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ReceivedSARO } from '../ReceivedSaroMainContainer'
+import { useDragScroll } from '@/hooks/useDragScroll'
 
 interface Props {
     saro: ReceivedSARO
@@ -19,6 +20,7 @@ function fmtDate(d: string | null) {
 }
 
 export default function ViewReceivedSaroDialog({ saro, onClose }: Props) {
+    const dragScroll = useDragScroll<HTMLDivElement>()
     const th = 'px-3 py-2 text-left text-xs font-gmedium text-white whitespace-nowrap'
     const td = 'px-3 py-2 text-xs text-foreground whitespace-nowrap'
 
@@ -59,7 +61,7 @@ export default function ViewReceivedSaroDialog({ saro, onClose }: Props) {
                         {saro.items.length === 0 ? (
                             <p className="text-sm text-muted-foreground py-4 text-center">No line items.</p>
                         ) : (
-                            <div className="overflow-x-auto rounded-lg border border-border">
+                            <div ref={dragScroll.ref} onMouseDown={dragScroll.onMouseDown} onMouseMove={dragScroll.onMouseMove} onMouseUp={dragScroll.onMouseUp} onMouseLeave={dragScroll.onMouseLeave} className="overflow-x-auto rounded-lg border border-border cursor-grab">
                                 <table className="min-w-full text-sm border-collapse">
                                     <thead>
                                         <tr className="bg-primary">
