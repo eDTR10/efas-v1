@@ -14,8 +14,12 @@ import UserManagementContainer from './screens/user_management/UserManagementCon
 import AuditTrailContainer from './screens/audit_trail/AuditTrailContainer';
 import RAODMainContainer from './screens/raod/RAODMainContainer';
 import ReceivedSaroMainContainer from "./screens/received_saro/ReceivedSaroMainContainer";
+import RealignmentContainer from './screens/realignment/RealignmentContainer';
 import EfasSettingsContainer from './screens/settings/EfasSettingsContainer';
 import Dashboard from './screens/dashboard/Dashboard';
+import NTCAContainer from './screens/ntca/NTCAContainer';
+import ReceivedNTCAContainer from './screens/received_ntca/ReceivedNTCAContainer';
+import AccountingContainer from './screens/accounting/AccountingContainer';
 
 
 const router = createBrowserRouter([
@@ -34,6 +38,10 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <Dashboard /> },
       { path: "raod", element: <RAODMainContainer /> },
       { path: "received-saro", element: <ReceivedSaroMainContainer /> },
+      { path: "realignment", element: <RealignmentContainer /> },
+      { path: "received-ntca", element: <ReceivedNTCAContainer /> },
+      { path: "ntca", element: <NTCAContainer /> },
+      { path: "accounting", element: <AccountingContainer /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "settings", element: <EfasSettingsContainer /> },
       { path: "audit-trail", element: <AuditTrailContainer /> },

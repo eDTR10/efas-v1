@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { X, CheckCircle2, AlertCircle, Loader2, Trash2, Upload } from 'lucide-react'
+import { useRef, useState, useMemo } from 'react'
+import { X, CheckCircle2, AlertCircle, Loader2, Trash2, UploadCloud, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import efasApi from '@/plugin/axios'
 import type { PAPCode, ReceivedSARO, FundType, ClassType } from '../RAODMainContainer'
@@ -94,12 +94,16 @@ const rowInp = 'w-full rounded border border-input bg-background px-1.5 py-0.5 t
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, receivedSaros, onClose, onDone }: Props) {
-    const [fileName, setFileName] = useState<string | null>(null)
+
     const [rows, setRows] = useState<BulkRow[]>([])
     const [parsed, setParsed] = useState(false)
     const [importing, setImporting] = useState(false)
     const [done, setDone] = useState(false)
     const [importProgress, setImportProgress] = useState({ current: 0, total: 0 })
+    const [isDragging, setIsDragging] = useState(false)
+    const [fileError, setFileError] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const dragCounter = useRef(0)
 
     const COLS = useMemo((): ColDef[] => [
         { key: 'pap_name', label: 'PAP Name', width: 'min-w-[160px]' },
@@ -138,30 +142,27 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
         for (const cols of allRows) {
             const g = (i: number) => (cols[i] ?? '').toString().trim()
             const first = g(0).toLowerCase()
-            // Skip header rows (any row whose first cell is a known header label)
+            // Skip header rows
             if (['pap', 'pap name', 'pap_name', 'pap code', 'pap_code'].includes(first)) continue
             // Skip fully empty rows
             if (cols.every(c => !String(c).trim())) continue
-            // Skip rows with no obligation data (not a real entry — subtotal / padding rows)
+            // Skip rows with no obligation data
             const hasOrs = !!g(12)
             const hasObligated = !!g(15) && g(15) !== '-' && g(15) !== '0'
             if (!hasOrs && !hasObligated) continue
 
-            // Column layout (matches both CSV export and sheet column order):
-            // A(0)=PAP  B(1)=PAP CODE  C(2)=DATE OF SARO  D(3)=SARO NO
-            // E(4)=AMOUNT OF ALLOTMENT  F(5)=REMARKS  G(6)=OBJECT DESCRIPTION  H(7)=OBJECT CODE
-            // I(8)=Date of Obligation  J(9)=Description-Fund Type  K(10)=CLASS TYPE  L(11)=fund source
-            // M(12)=ORS NO.  N(13)=NAME OF CLAIMANT  O(14)=PARTICULARS  P(15)=OBLIGATED AMOUNT
-            // Q(16)=DATE  R(17)=ADA/CHECK  S(18)=CASH  T(19)=NON TRA
-            // U(20)=BALANCE (ignored)  V(21)=no title (excluded)
+            // Column layout:
+            // A(0)=PAP Name  B(1)=PAP Code  C(2)=Date of SARO  D(3)=SARO No.
+            // E(4)=Amt of Allotment  F(5)=Remarks  G(6)=Object Desc  H(7)=Object Code
+            // I(8)=Date of Obligation  J(9)=Fund Type  K(10)=Class Type  L(11)=Fund Source
+            // M(12)=ORS No.  N(13)=Name of Claimant  O(14)=Particulars  P(15)=Obligated Amt
+            // Q(16)=Date (Disbursement)  R(17)=ADA/Check  S(18)=Cash  T(19)=Non-TRA
 
-            // Fuzzy-match class_type: K(10) → ClassType code
             const rawClass = g(10).toLowerCase()
             const matchedCT = rawClass ? classTypes.find(ct =>
                 rawClass === ct.code || rawClass.includes(ct.name.toLowerCase())
             ) : undefined
 
-            // Fuzzy-match fund_type: J(9) → FundType
             const rawFund = g(9).toLowerCase()
             const matchedFT = rawFund ? fundTypes.find(ft => {
                 const words = ft.name.toLowerCase().split(/[\s\-]+/)
@@ -170,7 +171,6 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
                     words.some(w => w.length > 3 && rawFund.includes(w))
             }) : undefined
 
-            // Fund source: use L(11) directly if it’s a valid code, else use matched code
             const rawFundSource = g(11)
             const fundSourceCode = fundTypes.find(ft => ft.code === rawFundSource)
                 ? rawFundSource
@@ -197,7 +197,6 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
                 ada_check: g(17),
                 cash: g(18),
                 non_tra: g(19),
-                // U(20)=BALANCE ignored, V(21)=untitled excluded
                 status: 'pending',
             })
         }
@@ -210,27 +209,67 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
         setParsed(true)
     }
 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-        setFileName(file.name)
-        e.target.value = ''
+    const processFile = (file: File) => {
+        setFileError(null)
         const ext = file.name.split('.').pop()?.toLowerCase()
         if (ext === 'xlsx' || ext === 'xls') {
             const reader = new FileReader()
             reader.onload = ev => {
-                const wb = XLSX.read(ev.target?.result, { type: 'binary', raw: true, cellDates: false })
-                const ws = wb.Sheets[wb.SheetNames[0]]
-                const grid: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
-                const result = processGrid(grid)
-                setRows(result)
-                setParsed(true)
+                try {
+                    const wb = XLSX.read(ev.target?.result, { type: 'binary', raw: true, cellDates: false })
+                    const ws = wb.Sheets[wb.SheetNames[0]]
+                    const grid: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
+                    setRows(processGrid(grid))
+                    setParsed(true)
+                } catch {
+                    setFileError(`Could not read "${file.name}". Make sure it is a valid Excel file.`)
+                }
             }
             reader.readAsBinaryString(file)
         } else {
             const reader = new FileReader()
             reader.onload = ev => parseRows(ev.target?.result as string ?? '')
+            reader.onerror = () => setFileError(`Could not read "${file.name}".`)
             reader.readAsText(file)
+        }
+    }
+
+    const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        e.target.value = ''
+        processFile(file)
+    }
+
+    // ── Drag & Drop ───────────────────────────────────────────────────────────
+
+    const onDragEnter = (e: React.DragEvent) => {
+        e.preventDefault(); e.stopPropagation()
+        dragCounter.current++
+        setIsDragging(true)
+    }
+    const onDragLeave = (e: React.DragEvent) => {
+        e.preventDefault(); e.stopPropagation()
+        dragCounter.current--
+        if (dragCounter.current === 0) setIsDragging(false)
+    }
+    const onDragOver = (e: React.DragEvent) => {
+        e.preventDefault(); e.stopPropagation()
+        e.dataTransfer.dropEffect = 'copy'
+    }
+    const onDrop = (e: React.DragEvent) => {
+        e.preventDefault(); e.stopPropagation()
+        dragCounter.current = 0
+        setIsDragging(false)
+        let file: File | null = e.dataTransfer.files?.[0] ?? null
+        if (!file) {
+            const item = Array.from(e.dataTransfer.items ?? []).find(it => it.kind === 'file')
+            file = item?.getAsFile() ?? null
+        }
+        if (file) {
+            processFile(file)
+        } else {
+            setFileError('No file detected. Drag from Windows File Explorer instead of the browser download panel, or click to browse.')
         }
     }
 
@@ -360,19 +399,60 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
                         </div>
                     </div>
 
-                    {/* CSV file upload area */}
+                    {/* File upload area */}
                     {!parsed && (
-                        <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-border rounded-xl px-6 py-12 cursor-pointer hover:border-primary hover:bg-primary/5 transition group">
-                            <Upload size={32} className="text-muted-foreground group-hover:text-primary transition" />
-                            <div className="text-center">
-                                <p className="text-sm font-gmedium text-foreground">Click to upload a CSV file</p>
-                                <p className="text-xs text-muted-foreground mt-1">Upload your <span className="font-gmedium">.xlsx</span> or <span className="font-gmedium">.csv</span> file. For CSV: File → Save As → CSV UTF-8 in Excel/Sheets</p>
+                        <div className="flex flex-col gap-3">
+                            <div
+                                className={`relative border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 py-12 px-6 text-center cursor-pointer transition-all duration-200 select-none ${isDragging
+                                    ? 'border-primary bg-primary/8 scale-[1.01]'
+                                    : 'border-border hover:border-primary/50 hover:bg-muted/20'
+                                    }`}
+                                onDragEnter={onDragEnter}
+                                onDragLeave={onDragLeave}
+                                onDragOver={onDragOver}
+                                onDrop={onDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".csv,.xlsx,.xls,.tsv,text/csv"
+                                    className="hidden"
+                                    onChange={handleFileInput}
+                                />
+                                {isDragging ? (
+                                    <>
+                                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <UploadCloud size={28} className="text-primary animate-bounce" />
+                                        </div>
+                                        <p className="font-gbold text-primary text-base">Drop to import</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                                            <UploadCloud size={28} className="text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                            <p className="font-gbold text-foreground text-sm">Drag & drop your spreadsheet here</p>
+                                            <p className="text-xs text-muted-foreground mt-1">or <span className="text-primary underline underline-offset-2">click to browse</span></p>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap justify-center">
+                                            {['.xlsx', '.xls', '.csv'].map(ext => (
+                                                <span key={ext} className="inline-flex items-center gap-1 text-[10px] font-gsemibold bg-muted text-muted-foreground border border-border px-2 py-0.5 rounded-full">
+                                                    <FileSpreadsheet size={10} /> {ext}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                            {fileName && (
-                                <span className="text-xs text-primary font-gmedium bg-primary/10 rounded px-3 py-1">{fileName}</span>
+                            {fileError && (
+                                <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
+                                    <AlertCircle size={14} className="shrink-0" />
+                                    {fileError}
+                                </div>
                             )}
-                            <input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={handleFile} />
-                        </label>
+                        </div>
                     )}
 
                     {/* Parsed row editor */}
@@ -385,7 +465,7 @@ export default function BulkImportRaodDialog({ paps, fundTypes, classTypes, rece
                                 {errorCount > 0 && <span className="flex items-center gap-1 text-destructive"><AlertCircle size={14} />{errorCount} error{errorCount !== 1 ? 's' : ''}</span>}
                                 {pendingCount > 0 && <span className="text-muted-foreground">{pendingCount} pending</span>}
                                 <button
-                                    onClick={() => { setParsed(false); setRows([]); setFileName(null) }}
+                                    onClick={() => { setParsed(false); setRows([]) }}
                                     className="ml-auto text-xs text-muted-foreground hover:text-foreground transition underline"
                                 >
                                     ← Change file

@@ -94,6 +94,7 @@ function RaodDetailPanel({ raod, onClose, onEdit, onDelete }: {
     onDelete: () => void
 }) {
     const [panelWidth, setPanelWidth] = useState(700)
+    const [tab, setTab] = useState<'details' | 'summary'>('details')
     const isResizing = useRef(false)
     const startX = useRef(0)
     const startWidth = useRef(700)
@@ -112,6 +113,8 @@ function RaodDetailPanel({ raod, onClose, onEdit, onDelete }: {
             document.removeEventListener('mouseup', onUp)
         }
     }, [])
+
+    useEffect(() => { setTab('details') }, [raod.id])
 
     const totalObligated = raod.entries.reduce((s, e) => s + (parseFloat(e.obligated_amount) || 0), 0)
     const totalDisbursed = raod.entries.reduce((s, e) => s + (parseFloat(e.total_disbursed) || 0), 0)
@@ -220,9 +223,228 @@ function RaodDetailPanel({ raod, onClose, onEdit, onDelete }: {
                     </div>
                 </div>
 
+                {/* ── Tabs ── */}
+                <div className="flex border-b border-border shrink-0 px-1 bg-card">
+                    {(['details', 'summary'] as const).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setTab(t)}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-gsemibold border-b-2 transition -mb-px ${
+                                tab === t
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            {t === 'details' ? 'Details & Entries' : (
+                                <span className="flex items-center gap-1.5">
+                                    Summary
+                                    {raod.entries.length > 0 && (
+                                        <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-gbold leading-none">
+                                            {raod.entries.length}
+                                        </span>
+                                    )}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
                 {/* ── Scrollable body ── */}
                 <div className="flex-1 overflow-y-auto">
 
+                {tab === 'summary' && (() => {
+                    // ── Claimant breakdown ──
+                    const byClaimant = new Map<string, { obligated: number; disbursed: number; cash: number; nonTra: number; count: number }>()
+                    raod.entries.forEach(e => {
+                        const key = e.name_of_claimant?.trim() || '(no claimant)'
+                        const cur = byClaimant.get(key) ?? { obligated: 0, disbursed: 0, cash: 0, nonTra: 0, count: 0 }
+                        cur.obligated += parseFloat(e.obligated_amount) || 0
+                        cur.disbursed += parseFloat(e.total_disbursed) || 0
+                        cur.cash      += parseFloat(e.cash) || 0
+                        cur.nonTra    += parseFloat(e.non_tra) || 0
+                        cur.count     += 1
+                        byClaimant.set(key, cur)
+                    })
+                    const claimantRows = [...byClaimant.entries()].sort((a, b) => b[1].obligated - a[1].obligated)
+
+                    // ── Monthly timeline breakdown ──
+                    const byMonth = new Map<string, { obligated: number; disbursed: number; count: number }>()
+                    raod.entries.forEach(e => {
+                        const raw = e.date_of_obligation
+                        if (!raw) return
+                        const d = new Date(raw)
+                        if (isNaN(d.getTime())) return
+                        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                        const label = d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short' })
+                        const cur = byMonth.get(key) ?? { obligated: 0, disbursed: 0, count: 0 }
+                        cur.obligated += parseFloat(e.obligated_amount) || 0
+                        cur.disbursed += parseFloat(e.total_disbursed) || 0
+                        cur.count     += 1
+                        byMonth.set(key, { ...cur, label } as any)
+                    })
+                    const monthRows = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+
+                    // ── Disbursement mode totals ──
+                    const totalCash   = raod.entries.reduce((s, e) => s + (parseFloat(e.cash) || 0), 0)
+                    const totalNonTra = raod.entries.reduce((s, e) => s + (parseFloat(e.non_tra) || 0), 0)
+                    const totalUndisb = totalObligated - totalDisbursed
+
+                    return (
+                        <div className="px-5 pt-5 pb-5 flex flex-col gap-5">
+
+                            {/* ── Disbursement Breakdown ── */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-1 h-4 rounded-full bg-primary shrink-0" />
+                                    <p className="text-[11px] font-gbold uppercase tracking-widest text-muted-foreground">Disbursement Breakdown</p>
+                                </div>
+                                <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                                    {[
+                                        { label: 'Total Obligated', value: totalObligated, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/5' },
+                                        { label: 'Cash',            value: totalCash,      color: 'text-emerald-600 dark:text-emerald-400', bg: '' },
+                                        { label: 'Non-TRA',         value: totalNonTra,    color: 'text-blue-600 dark:text-blue-400', bg: '' },
+                                        { label: 'Total Disbursed', value: totalDisbursed, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5' },
+                                        { label: 'Undisbursed',     value: totalUndisb,    color: totalUndisb < 0 ? 'text-destructive' : 'text-foreground', bg: totalUndisb < 0 ? 'bg-destructive/5' : '' },
+                                    ].map(row => (
+                                        <div key={row.label} className={`flex items-center justify-between px-4 py-2.5 ${row.bg}`}>
+                                            <span className="text-[11px] text-muted-foreground">{row.label}</span>
+                                            <span className={`text-[12px] font-gbold tabular-nums ${row.color}`}>
+                                                ₱{row.value.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Mini stacked bar: Cash vs Non-TRA vs Undisbursed */}
+                                {totalObligated > 0 && (
+                                    <div className="mt-2.5 px-1">
+                                        <div className="flex h-2.5 rounded-full overflow-hidden gap-px bg-border/40">
+                                            {totalCash > 0 && (
+                                                <div
+                                                    className="bg-emerald-500 rounded-l-full"
+                                                    style={{ width: `${(totalCash / totalObligated) * 100}%` }}
+                                                    title={`Cash: ₱${totalCash.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
+                                                />
+                                            )}
+                                            {totalNonTra > 0 && (
+                                                <div
+                                                    className="bg-blue-500"
+                                                    style={{ width: `${(totalNonTra / totalObligated) * 100}%` }}
+                                                    title={`Non-TRA: ₱${totalNonTra.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
+                                                />
+                                            )}
+                                            {totalUndisb > 0 && (
+                                                <div
+                                                    className="bg-muted/60 rounded-r-full flex-1"
+                                                    title={`Undisbursed: ₱${totalUndisb.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                            {totalCash > 0 && <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Cash</span>}
+                                            {totalNonTra > 0 && <span className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Non-TRA</span>}
+                                            {totalUndisb > 0 && <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="w-2 h-2 rounded-full bg-muted inline-block" />Undisbursed</span>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ── By Claimant ── */}
+                            {claimantRows.length > 0 && (
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-1 h-4 rounded-full bg-amber-500/70 shrink-0" />
+                                        <p className="text-[11px] font-gbold uppercase tracking-widest text-muted-foreground">By Claimant</p>
+                                        <span className="text-[10px] font-gbold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                            {claimantRows.length}
+                                        </span>
+                                    </div>
+                                    <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                                        {claimantRows.map(([name, data]) => {
+                                            const pct = totalObligated > 0 ? (data.obligated / totalObligated) * 100 : 0
+                                            const disbPct = data.obligated > 0 ? Math.min(100, (data.disbursed / data.obligated) * 100) : 0
+                                            const bal = data.obligated - data.disbursed
+                                            return (
+                                                <div key={name} className="px-4 py-3 hover:bg-muted/20 transition-colors">
+                                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-gsemibold text-foreground truncate" title={name}>{name}</p>
+                                                            <p className="text-[10px] text-muted-foreground mt-0.5">{data.count} entr{data.count !== 1 ? 'ies' : 'y'} · {pct.toFixed(1)}% of total</p>
+                                                        </div>
+                                                        <div className="shrink-0 text-right">
+                                                            <p className="text-xs font-gbold text-foreground">₱{data.obligated.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                                                            <p className={`text-[10px] font-gmedium ${bal < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                                                bal ₱{bal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-1 rounded-full bg-border overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${disbPct >= 80 ? 'bg-emerald-500' : disbPct >= 50 ? 'bg-amber-500' : 'bg-orange-400'}`}
+                                                            style={{ width: `${disbPct}%` }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                                        Disbursed {disbPct.toFixed(1)}% · ₱{data.disbursed.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                                    </p>
+                                                </div>
+                                            )
+                                        })}
+                                        {/* Totals row */}
+                                        <div className="px-4 py-2.5 bg-primary/5 flex items-center justify-between">
+                                            <span className="text-[11px] font-gbold text-muted-foreground uppercase tracking-widest">Total</span>
+                                            <span className="text-sm font-gbold text-foreground">₱{totalObligated.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ── Obligation Timeline ── */}
+                            {monthRows.length > 1 && (
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-1 h-4 rounded-full bg-blue-500/70 shrink-0" />
+                                        <p className="text-[11px] font-gbold uppercase tracking-widest text-muted-foreground">Obligation Timeline</p>
+                                    </div>
+                                    <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                                        {monthRows.map(([key, data]) => {
+                                            const d = data as any
+                                            const barW = totalObligated > 0 ? (d.obligated / totalObligated) * 100 : 0
+                                            return (
+                                                <div key={key} className="px-4 py-2.5 hover:bg-muted/20 transition-colors">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-[11px] font-gsemibold text-foreground">{d.label}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[10px] text-muted-foreground">{d.count} entr{d.count !== 1 ? 'ies' : 'y'}</span>
+                                                            <span className="text-xs font-gbold text-foreground">₱{d.obligated.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-1 rounded-full bg-border overflow-hidden">
+                                                        <div className="h-full rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${barW}%` }} />
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ── Empty state ── */}
+                            {raod.entries.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border text-center">
+                                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3">
+                                        <ClipboardList size={18} className="text-muted-foreground" />
+                                    </div>
+                                    <p className="text-sm font-gmedium text-muted-foreground">No entries to summarize</p>
+                                    <p className="text-xs text-muted-foreground/60 mt-0.5">Add entries via Edit RAOD</p>
+                                </div>
+                            )}
+                        </div>
+                    )
+                })()}
+
+                {tab === 'details' && (
+                    <>
                     {/* RAOD Details */}
                     <div className="px-5 pt-5 pb-3">
                         <div className="flex items-center gap-2 mb-3">
@@ -423,6 +645,8 @@ function RaodDetailPanel({ raod, onClose, onEdit, onDelete }: {
                             </div>
                         )}
                     </div>
+                    </>
+                )}
                 </div>
 
                 {/* ── Footer Actions ── */}
@@ -459,6 +683,9 @@ export default function RAODMainContainer() {
     const [search, setSearch] = useState('')
     const [filterPap, setFilterPap] = useState('All')
     const [filterSaro, setFilterSaro] = useState('All')
+    const [filterYear, setFilterYear] = useState('All')
+    const [filterDateFrom, setFilterDateFrom] = useState('')
+    const [filterDateTo, setFilterDateTo] = useState('')
     const [showAdd, setShowAdd] = useState(false)
     const [showBulk, setShowBulk] = useState(false)
     const [editTarget, setEditTarget] = useState<RAOD | null>(null)
@@ -477,6 +704,7 @@ export default function RAODMainContainer() {
 
     // Drag-to-scroll
     const tableRef = useRef<HTMLDivElement>(null)
+    const sortedRaodsRef = useRef<RAOD[]>([])
     const dragging = useRef(false)
     const dragMoved = useRef(false)
     const dragStartX = useRef(0)
@@ -518,7 +746,16 @@ export default function RAODMainContainer() {
 
     useEffect(() => { fetchAll() }, [])
 
-    // Auto-open panel when navigated from dashboard
+    // Pre-fill search when navigated from Dashboard PAP click
+    useEffect(() => {
+        const state = location.state as { openSaroNo?: string; search?: string } | null
+        if (!state?.search) return
+        setSearch(state.search)
+        setPage(1)
+        window.history.replaceState({}, '')
+    }, [location.state])
+
+    // Auto-open panel when navigated from dashboard with SARO no.
     const autoOpenedRef = useRef(false)
     useEffect(() => {
         const state = location.state as { openSaroNo?: string } | null
@@ -526,6 +763,11 @@ export default function RAODMainContainer() {
         const match = raods.find(r => r.saro_no === state.openSaroNo)
         if (match) {
             autoOpenedRef.current = true
+            // Jump to the page that contains this RAOD in the current sorted list
+            const idx = sortedRaodsRef.current.findIndex(r => r.id === match.id)
+            if (idx !== -1) {
+                setPage(Math.ceil((idx + 1) / pageSize))
+            }
             setPanelRaod(match)
             setExpandedRaodIds(prev => new Set([...prev, match.id]))
             window.history.replaceState({}, '')
@@ -538,7 +780,23 @@ export default function RAODMainContainer() {
         .sort((a, b) => a[0].localeCompare(b[0]))
     const saroOptions = Array.from(new Set(raods.map(r => r.saro_no))).sort()
 
+    // Year / quarter helpers
+    const availableYears = [...new Set(raods.map(r => r.date_of_saro?.slice(0, 4)).filter((y): y is string => !!y))].sort().reverse()
+    const activeFilterYear = filterYear !== 'All' ? parseInt(filterYear) : new Date().getFullYear()
+    const QUARTERS = [
+        { label: 'Q1', from: `${activeFilterYear}-01-01`, to: `${activeFilterYear}-03-31` },
+        { label: 'Q2', from: `${activeFilterYear}-04-01`, to: `${activeFilterYear}-06-30` },
+        { label: 'Q3', from: `${activeFilterYear}-07-01`, to: `${activeFilterYear}-09-30` },
+        { label: 'Q4', from: `${activeFilterYear}-10-01`, to: `${activeFilterYear}-12-31` },
+    ]
+    const activeQ = QUARTERS.find(q => q.from === filterDateFrom && q.to === filterDateTo)?.label ?? null
+    const hasDateFilter = filterYear !== 'All' || !!filterDateFrom || !!filterDateTo
+
     const filteredRaods = raods.filter(raod => {
+        const d = raod.date_of_saro ?? ''
+        if (filterYear !== 'All' && !d.startsWith(filterYear)) return false
+        if (filterDateFrom && d < filterDateFrom) return false
+        if (filterDateTo && d > filterDateTo) return false
         if (filterPap !== 'All' && raod.pap_code !== filterPap) return false
         if (filterSaro !== 'All' && raod.saro_no !== filterSaro) return false
         if (!search.trim()) return true
@@ -571,6 +829,7 @@ export default function RAODMainContainer() {
         if (av > bv) return sortDir === 'asc' ? 1 : -1
         return 0
     })
+    sortedRaodsRef.current = sortedRaods
 
     const sumAllotment = filteredRaods.reduce((s, r) => s + (parseFloat(r.amount_of_allotment) || 0), 0)
     const allFilteredEntries = filteredRaods.flatMap(r => r.entries)
@@ -703,6 +962,50 @@ export default function RAODMainContainer() {
                 </div>
             </div>
 
+            {/* Date / Year / Quarter Filters */}
+            <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-border bg-card/60">
+                <span className="text-xs font-gmedium text-muted-foreground whitespace-nowrap">Date:</span>
+                <select
+                    value={filterYear}
+                    onChange={e => { setFilterYear(e.target.value); setFilterDateFrom(''); setFilterDateTo(''); setPage(1) }}
+                    className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                    <option value="All">All Years</option>
+                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                {QUARTERS.map(q => (
+                    <button
+                        key={q.label}
+                        onClick={() => { setFilterDateFrom(q.from); setFilterDateTo(q.to); setPage(1) }}
+                        className={`h-8 px-2.5 rounded-lg text-xs font-gmedium border transition ${activeQ === q.label ? 'bg-primary text-white border-primary' : 'bg-background text-foreground/80 border-border hover:bg-muted'}`}
+                    >
+                        {q.label}
+                    </button>
+                ))}
+                <span className="text-xs text-muted-foreground mx-0.5">|</span>
+                <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={e => { setFilterDateFrom(e.target.value); setPage(1) }}
+                    className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground">–</span>
+                <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={e => { setFilterDateTo(e.target.value); setPage(1) }}
+                    className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                {hasDateFilter && (
+                    <button
+                        onClick={() => { setFilterYear('All'); setFilterDateFrom(''); setFilterDateTo(''); setPage(1) }}
+                        className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-gmedium bg-primary/10 text-primary hover:bg-primary/20 transition"
+                    >
+                        <X size={11} /> Clear
+                    </button>
+                )}
+            </div>
+
             {/* Search + Sort + Filters */}
             <div className="flex flex-wrap items-center gap-3">
                 <div className="relative w-64">
@@ -752,6 +1055,14 @@ export default function RAODMainContainer() {
                         className="inline-flex items-center gap-1.5 text-xs font-gmedium px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition"
                     >
                         <X size={11} /> Clear filters
+                    </button>
+                )}
+                {hasDateFilter && (
+                    <button
+                        onClick={() => { setFilterYear('All'); setFilterDateFrom(''); setFilterDateTo(''); setPage(1) }}
+                        className="inline-flex items-center gap-1.5 text-xs font-gmedium px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition"
+                    >
+                        <X size={11} /> Clear date
                     </button>
                 )}
 

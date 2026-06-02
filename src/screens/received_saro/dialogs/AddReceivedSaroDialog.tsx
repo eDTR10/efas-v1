@@ -127,6 +127,11 @@ export default function AddReceivedSaroDialog({ paps, fundTypes, classTypes, obj
     const setItem = (idx: number, k: keyof ItemForm, v: string | number) =>
         setItems(p => p.map((it, i) => i === idx ? { ...it, [k]: v } : it))
 
+    const onHeaderClassTypeChange = (value: string) => {
+        setH('class_type', value)
+        setItems(p => p.map(it => ({ ...it, class_type: value })))
+    }
+
     const onPAPChange = (idx: number, papId: string) => {
         const found = paps.find(p => String(p.id) === papId)
         setItems(prev => prev.map((it, i) => {
@@ -244,7 +249,7 @@ export default function AddReceivedSaroDialog({ paps, fundTypes, classTypes, obj
                             </Field>
                             <Field label="Class Type">
                                 <select value={header.class_type}
-                                    onChange={e => setH('class_type', e.target.value)}
+                                    onChange={e => onHeaderClassTypeChange(e.target.value)}
                                     className={inp}>
                                     <option value="">— Select —</option>
                                     {classTypes.map(ct => (

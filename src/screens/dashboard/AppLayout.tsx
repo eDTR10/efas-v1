@@ -13,20 +13,44 @@ import {
     X,
     ChevronRight,
     User as UserIcon,
+    ArrowRightLeft,
+    Banknote,
+    Receipt,
+    Calculator,
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ModeToggle } from '@/components/mode-toggle'
 import efasApi from '@/plugin/axios'
 import efasLogo from '@/assets/eFAS_Logo.png'
 
-const NAV_ITEMS = [
-    { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/efas-v1/raod', label: 'RAOD', icon: ScrollText },
-    { to: '/efas-v1/received-saro', label: 'SARO Received', icon: FileText },
-    { to: '/efas-v1/reports', label: 'Reports', icon: BookMarked },
-    { to: '/efas-v1/settings', label: 'Settings', icon: Settings },
-    { to: '/efas-v1/audit-trail', label: 'Audit Trail', icon: ClipboardList },
-    { to: '/efas-v1/user-management', label: 'User Management', icon: Users },
+type NavLink = { to: string; label: string; icon: React.ElementType }
+type NavGroup = { title: string; items: NavLink[] }
+type NavEntry = { type: 'standalone'; item: NavLink } | { type: 'divider' } | { type: 'group'; group: NavGroup }
+
+const NAV_STRUCTURE: NavEntry[] = [
+    { type: 'standalone', item: { to: '/efas-v1/dashboard', label: 'Dashboard', icon: LayoutDashboard } },
+    { type: 'divider' },
+    { type: 'group', group: { title: 'Budget', items: [
+        { to: '/efas-v1/raod',          label: 'RAOD',          icon: ScrollText },
+        { to: '/efas-v1/received-saro', label: 'SARO Received', icon: FileText },
+        { to: '/efas-v1/realignment',   label: 'Realignment',   icon: ArrowRightLeft },
+    ]}},
+    { type: 'divider' },
+    { type: 'group', group: { title: 'Accounting', items: [
+        { to: '/efas-v1/ntca',          label: 'NTCA Report',   icon: Banknote },
+        { to: '/efas-v1/accounting',    label: 'Accounting',    icon: Calculator },
+        { to: '/efas-v1/received-ntca', label: 'NTCA Received', icon: Receipt },
+    ]}},
+    { type: 'divider' },
+    { type: 'group', group: { title: 'Report', items: [
+        { to: '/efas-v1/reports', label: 'Reports', icon: BookMarked },
+    ]}},
+    { type: 'divider' },
+    { type: 'group', group: { title: 'Other Settings', items: [
+        { to: '/efas-v1/user-management', label: 'User Management', icon: Users },
+        { to: '/efas-v1/audit-trail',     label: 'Audit Trail',     icon: ClipboardList },
+        { to: '/efas-v1/settings',        label: 'Settings',        icon: Settings },
+    ]}},
 ]
 
 export default function AppLayout() {
@@ -88,26 +112,47 @@ export default function AppLayout() {
             </div>
 
             {/* Nav items */}
-            <nav className="flex-1 flex flex-col gap-1 py-4 px-2 overflow-y-auto">
-                {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-                    <NavLink
-                        key={to}
-                        to={to}
-                        onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all
-              ${isActive
-                                ? 'bg-primary text-white font-gmedium shadow'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            <nav className="flex-1 flex flex-col py-3 px-2 overflow-y-auto gap-0.5">
+                {NAV_STRUCTURE.map((entry, i) => {
+                    if (entry.type === 'divider') {
+                        return <div key={`div-${i}`} className="my-2 border-t border-border/50" />
+                    }
+
+                    const renderLink = ({ to, label, icon: Icon }: NavLink) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            onClick={() => setMobileOpen(false)}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all
+                                ${isActive
+                                    ? 'bg-primary text-white font-gmedium shadow'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                }
+                                ${collapsed && !mobile ? 'justify-center px-2' : ''}`
                             }
-              ${collapsed && !mobile ? 'justify-center px-2' : ''}
-              `
-                        }
-                    >
-                        <Icon size={18} className="min-w-[18px]" />
-                        {(!collapsed || mobile) && <span>{label}</span>}
-                    </NavLink>
-                ))}
+                        >
+                            <Icon size={18} className="min-w-[18px]" />
+                            {(!collapsed || mobile) && <span>{label}</span>}
+                        </NavLink>
+                    )
+
+                    if (entry.type === 'standalone') {
+                        return renderLink(entry.item)
+                    }
+
+                    // group
+                    return (
+                        <div key={`grp-${i}`} className="flex flex-col gap-0.5">
+                            {(!collapsed || mobile) && (
+                                <p className="px-3 pt-1 pb-0.5 text-[10px] font-gbold uppercase tracking-widest text-muted-foreground/60 select-none">
+                                    {entry.group.title}
+                                </p>
+                            )}
+                            {entry.group.items.map(renderLink)}
+                        </div>
+                    )
+                })}
             </nav>
 
             {/* Logout */}

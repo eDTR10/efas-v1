@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
+    PieChart,
+    Pie,
+    Cell,
     Tooltip,
     ResponsiveContainer,
 } from 'recharts'
-import { FileText, Search, TrendingUp, Layers, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { FileText, Search, TrendingUp, Layers, ChevronLeft, ChevronRight, ExternalLink, Activity, X, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import efasApi from '@/plugin/axios'
-import ProjectDetailPanel from './ProjectDetailPanel'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,12 +69,30 @@ interface RAODRecord {
 
 interface FundTypeDef { id: number; code: string; name: string }
 
+interface NTCAItem {
+    id: number
+    particulars: string
+    purpose: string
+    pap_code: string
+    fund_type: string
+    year: number | null
+    class_type: string
+    saro_no: string
+    saro_year: string
+    nca_date: string
+    nta_no: string
+    nca_amount: string
+    nca_no: string
+    remarks: string
+}
+
 /** Derived per-PAP aggregate */
 interface PAPStat {
     name: string
     code: string
     allotment: number
     obligation: number   // sum of nca_amount
+    disbursed: number    // sum of total_disbursed from RAOD
     balance: number
     itemCount: number
     saroNos: string[]
@@ -149,7 +165,7 @@ function FinancialCard({
                                     />
                                 </div>
                                 <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : ''}`}>
-                                    {row.barPct.toFixed(0)}%
+                                    {Math.min(100, row.barPct).toFixed(0)}%
                                 </span>
                             </div>
                         )}
@@ -174,7 +190,7 @@ function FinancialCard({
                                             />
                                         </div>
                                         <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
-                                            {row.barPct.toFixed(0)}%
+                                            {Math.min(100, row.barPct).toFixed(0)}%
                                         </span>
                                     </div>
                                 )}
@@ -210,7 +226,7 @@ function FinancialCard({
                                     />
                                 </div>
                                 <span className={`text-[10px] font-gbold w-8 text-right tabular-nums ${row.barPct >= 80 ? 'text-green-500' : row.barPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
-                                    {row.barPct.toFixed(0)}%
+                                    {Math.min(100, row.barPct).toFixed(0)}%
                                 </span>
                             </div>
                         )}
@@ -301,47 +317,149 @@ function Pagination({ page, total, pageSize, onChange }: {
     )
 }
 
-// ─── Financial Status Overview ────────────────────────────────────────────────
+// ─── Financial Pie Chart ──────────────────────────────────────────────────────
 
-function FinancialStatusOverview({ stats }: { stats: PAPStat[] }) {
-    const data = [...stats]
-        .sort((a, b) => b.allotment - a.allotment)
-        .slice(0, 8)
-        .map(s => ({
-            name: s.name.length > 32 ? s.name.slice(0, 30) + '…' : s.name,
-            Allotment: s.allotment,
-            Obligation: s.obligation,
-        }))
+const CHART_COLORS = [
+    'hsl(var(--chart-2))',  // Disbursed  — emerald-toned
+    'hsl(var(--chart-3))',  // Obligated  — amber-toned
+    'hsl(var(--chart-1))',  // Available  — primary blue
+]
 
-    if (data.length === 0) return (
-        <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">No data yet.</div>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function PieSliceLabel(props: any) {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props
+    if (!percent || percent < 0.05) return null
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.52
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+        <text
+            x={x} y={y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="white"
+            fontSize={10}
+            fontWeight="700"
+            style={{ pointerEvents: 'none', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
+        >
+            {`${(percent * 100).toFixed(1)}%`}
+        </text>
     )
+}
+
+function FinancialPieChart({
+    totalAllotment,
+    totalObligation,
+    totalDisbursed,
+}: {
+    totalAllotment: number
+    totalObligation: number
+    totalDisbursed: number
+}) {
+    const disbursed = Math.max(0, Math.min(totalDisbursed, totalAllotment))
+    const obligatedRemaining = Math.max(0, totalObligation - disbursed)
+    const available = Math.max(0, totalAllotment - totalObligation)
+
+    const slices = [
+        { name: 'Disbursed', value: disbursed,           color: CHART_COLORS[0], textColor: 'text-emerald-500' },
+        { name: 'Obligated', value: obligatedRemaining,  color: CHART_COLORS[1], textColor: 'text-amber-500' },
+        { name: 'Available', value: available,           color: CHART_COLORS[2], textColor: 'text-primary' },
+    ]
+    const chartData = slices.filter(s => s.value > 0)
+
+    if (totalAllotment === 0) {
+        return <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">No data yet.</div>
+    }
+
+    const obligPct = (totalObligation / totalAllotment) * 100
+    const disbPct  = (disbursed / totalAllotment) * 100
 
     return (
-        <ResponsiveContainer width="100%" height={Math.max(280, data.length * 68)}>
-            <BarChart data={data} layout="vertical" margin={{ top: 0, right: 80, left: 10, bottom: 0 }} barSize={9} barGap={3}>
-                <XAxis
-                    type="number"
-                    tickFormatter={v => `₱${(v / 1e6).toFixed(0)}M`}
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={false} tickLine={false}
-                />
-                <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={170}
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={false} tickLine={false}
-                />
-                <Tooltip
-                    formatter={(val, name) => [fmtPHP(Number(val)), name]}
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12, color: 'hsl(var(--foreground))' }}
-                    cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
-                />
-                <Bar dataKey="Allotment" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Obligation" fill="#10B981" radius={[0, 4, 4, 0]} />
-            </BarChart>
-        </ResponsiveContainer>
+        <div className="flex flex-col gap-4 flex-1">
+            <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                    <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={PieSliceLabel}
+                        labelLine={false}
+                    >
+                        {chartData.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} stroke="hsl(var(--card))" strokeWidth={1.5} />
+                        ))}
+                    </Pie>
+                    <Tooltip
+                        formatter={(val, name) => [fmtPHP(Number(val)), name]}
+                        contentStyle={{
+                            background: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: 'hsl(var(--foreground))',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        }}
+                        itemStyle={{ color: 'hsl(var(--foreground))' }}
+                        cursor={{ fill: 'hsl(var(--muted))' }}
+                    />
+                </PieChart>
+            </ResponsiveContainer>
+
+            {/* Legend */}
+            <div className="flex flex-col gap-0.5">
+                {slices.map(s => (
+                    <div key={s.name} className="flex items-center justify-between gap-2 py-1.5 border-b border-border/40 last:border-0">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className="text-xs text-muted-foreground">{s.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-gbold ${s.textColor}`}>
+                                {((s.value / totalAllotment) * 100).toFixed(1)}%
+                            </span>
+                            <span className="text-xs font-gbold text-foreground tabular-nums w-36 text-right">{fmtPHP(s.value)}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* 3 Progress Bars: SARO / NTCA / Disbursement */}
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                {([
+                    { label: 'SARO',         value: totalAllotment, pct: 100,                  color: CHART_COLORS[2], textColor: 'text-primary' },
+                    { label: 'NTCA',         value: totalObligation, pct: Math.min(100, obligPct), color: obligPct >= 80 ? CHART_COLORS[0] : obligPct >= 50 ? CHART_COLORS[1] : 'hsl(var(--chart-5))', textColor: obligPct >= 80 ? 'text-emerald-500' : obligPct >= 50 ? 'text-amber-500' : 'text-orange-500' },
+                    { label: 'Disbursement', value: disbursed,       pct: Math.min(100, disbPct),  color: disbPct >= 80  ? CHART_COLORS[0] : disbPct >= 50  ? CHART_COLORS[1] : 'hsl(var(--chart-5))', textColor: disbPct >= 80  ? 'text-emerald-500' : disbPct >= 50  ? 'text-amber-500' : 'text-orange-500' },
+                ] as const).map(({ label, value, pct: p, color, textColor }) => (
+                    <div key={label}>
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-gsemibold text-muted-foreground uppercase tracking-widest">{label}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="tabular-nums text-foreground">{fmtPHP(value)}</span>
+                                <span className={`font-gbold w-12 text-right tabular-nums ${textColor}`}>{p.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                        <div className="relative w-full h-2.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${p}%`, background: color }}
+                            />
+                        </div>
+                    </div>
+                ))}
+                <p className="text-[10px] text-muted-foreground">All percentages relative to SARO allotment</p>
+            </div>
+
+            {/* Total allotment strip */}
+            <div className="rounded-xl bg-muted/30 border border-border/60 px-4 py-3 flex items-center justify-between">
+                <span className="text-[10px] font-gsemibold uppercase tracking-widest text-muted-foreground">Total Allotment</span>
+                <span className="text-base font-gbold text-foreground tabular-nums">{fmtPHP(totalAllotment)}</span>
+            </div>
+        </div>
     )
 }
 
@@ -349,7 +467,7 @@ function FinancialStatusOverview({ stats }: { stats: PAPStat[] }) {
 
 const PAP_PAGE_SIZE = 5
 
-function ProgramPerformanceCard({ stats, onSelectPap }: { stats: PAPStat[]; onSelectPap: (s: PAPStat) => void }) {
+function ProgramPerformanceCard({ stats, onSelectPap, totalAllotment }: { stats: PAPStat[]; onSelectPap: (s: PAPStat) => void; totalAllotment: number }) {
     const [search, setSearch] = useState('')
     const [utilFilter, setUtilFilter] = useState<'All' | 'High' | 'Medium' | 'Low'>('All')
     const [page, setPage] = useState(1)
@@ -409,7 +527,14 @@ function ProgramPerformanceCard({ stats, onSelectPap }: { stats: PAPStat[]; onSe
                     <div className="flex flex-col gap-3 overflow-y-auto">
                         {pageItems.map((stat, i) => {
                             const globalRank = (page - 1) * PAP_PAGE_SIZE + i + 1
-                            const utilPct = pct(stat.obligation, stat.allotment)
+                            const saroPct = totalAllotment > 0 ? (stat.allotment / totalAllotment) * 100 : 0
+                            const ntcaPct = stat.allotment > 0 ? Math.min(100, (stat.obligation / stat.allotment) * 100) : 0
+                            const disbPct = stat.allotment > 0 ? Math.min(100, (stat.disbursed / stat.allotment) * 100) : 0
+                            const bars = [
+                                { label: 'SARO', value: fmtPHP(stat.allotment), pct: saroPct, textColor: 'text-blue-500', barColor: 'bg-blue-500' },
+                                { label: 'NTCA', value: fmtPHP(stat.obligation), pct: ntcaPct, textColor: ntcaPct >= 80 ? 'text-green-500' : ntcaPct >= 50 ? 'text-amber-500' : 'text-orange-500', barColor: ntcaPct >= 80 ? 'bg-green-500' : ntcaPct >= 50 ? 'bg-amber-500' : 'bg-orange-500' },
+                                { label: 'Disbursement', value: fmtPHP(stat.disbursed), pct: disbPct, textColor: disbPct >= 80 ? 'text-green-500' : disbPct >= 50 ? 'text-amber-500' : 'text-orange-500', barColor: disbPct >= 80 ? 'bg-green-500' : disbPct >= 50 ? 'bg-amber-500' : 'bg-orange-500' },
+                            ]
                             return (
                                 <div
                                     key={stat.name}
@@ -425,25 +550,24 @@ function ProgramPerformanceCard({ stats, onSelectPap }: { stats: PAPStat[]; onSe
                                                 <p className="text-xs font-gbold text-foreground truncate leading-snug">{stat.name}</p>
                                                 <ExternalLink size={11} className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
                                             </div>
-                                            <div className="flex items-center justify-between mt-0.5">
-                                                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Allotment</span>
-                                                <span className="text-[11px] font-gbold text-foreground">{fmtPHP(stat.allotment)}</span>
-                                            </div>
+                                            {stat.code && <p className="text-[10px] text-muted-foreground mt-0.5">{stat.code}</p>}
                                         </div>
                                     </div>
-                                    <div className="pl-9">
-                                        <div className="flex items-center justify-between text-[10px] mb-1">
-                                            <span className="text-muted-foreground uppercase tracking-wide">NCA Utilization</span>
-                                            <span className={`font-gbold ${utilPct >= 80 ? 'text-green-500' : utilPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
-                                                {utilPct}%
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-500 ${utilPct >= 80 ? 'bg-green-500' : utilPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`}
-                                                style={{ width: `${Math.min(utilPct, 100)}%` }}
-                                            />
-                                        </div>
+                                    <div className="flex flex-col gap-1.5 pl-9">
+                                        {bars.map(({ label, value, pct: p, textColor, barColor }) => (
+                                            <div key={label}>
+                                                <div className="flex items-center justify-between text-[10px] mb-0.5">
+                                                    <span className="text-muted-foreground uppercase tracking-wide font-gsemibold">{label}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-muted-foreground tabular-nums">{value}</span>
+                                                        <span className={`font-gbold w-9 text-right tabular-nums ${textColor}`}>{p.toFixed(0)}%</span>
+                                                    </div>
+                                                </div>
+                                                <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                                                    <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${p}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )
@@ -460,7 +584,7 @@ function ProgramPerformanceCard({ stats, onSelectPap }: { stats: PAPStat[]; onSe
 
 const SARO_PAGE_SIZE = 10
 
-function ActiveTrackingCard({ saros }: { saros: ReceivedSARO[] }) {
+function ActiveTrackingCard({ saros, onNavigate }: { saros: ReceivedSARO[]; onNavigate: (saroNo?: string) => void }) {
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<'All' | 'NCA Issued' | 'Received'>('All')
     const [classFilter, setClassFilter] = useState('All')
@@ -471,28 +595,22 @@ function ActiveTrackingCard({ saros }: { saros: ReceivedSARO[] }) {
         saros.flatMap(s => [s.class_type, ...s.items.map(i => i.class_type)]).filter(Boolean)
     )].sort()
 
-    // Flatten to items for display
-    const allRows = saros.flatMap(s =>
-        s.items.length > 0
-            ? s.items.map(item => ({ saro: s, item }))
-            : [{ saro: s, item: null as ReceivedSAROItem | null }]
-    )
-
-    const filtered = allRows.filter(({ saro, item }) => {
+    const filtered = saros.filter(saro => {
         const q = search.toLowerCase().trim()
         const matchSearch = !q ||
             saro.allotment_no.toLowerCase().includes(q) ||
-            (item?.pap_code ?? '').toLowerCase().includes(q) ||
-            (item?.description ?? '').toLowerCase().includes(q) ||
-            (item?.nta_no ?? '').toLowerCase().includes(q)
+            saro.items.some(item =>
+                item.pap_code.toLowerCase().includes(q) ||
+                item.description.toLowerCase().includes(q) ||
+                item.nta_no.toLowerCase().includes(q)
+            )
 
-        const hasNca = item ? parseN(item.nca_amount) > 0 : false
+        const hasNca = saro.items.some(item => parseN(item.nca_amount) > 0)
         const matchStatus = statusFilter === 'All' ||
             (statusFilter === 'NCA Issued' && hasNca) ||
             (statusFilter === 'Received' && !hasNca)
 
-        const rowClass = item?.class_type || saro.class_type || ''
-        const matchClass = classFilter === 'All' || rowClass === classFilter
+        const matchClass = classFilter === 'All' || saro.class_type === classFilter
 
         return matchSearch && matchStatus && matchClass
     })
@@ -511,7 +629,15 @@ function ActiveTrackingCard({ saros }: { saros: ReceivedSARO[] }) {
                     sub="Full line-item registry for all received SAROs"
                     icon={FileText}
                 />
-                <RealtimeBadge />
+                <div className="flex items-center gap-3 shrink-0">
+                    <RealtimeBadge />
+                    <button
+                        onClick={() => onNavigate()}
+                        className="text-[11px] font-gbold text-primary hover:underline flex items-center gap-1"
+                    >
+                        View All <ExternalLink size={11} />
+                    </button>
+                </div>
             </div>
             {/* Search + Filters */}
             <div className="flex flex-wrap gap-2 mt-4 mb-3">
@@ -550,35 +676,48 @@ function ActiveTrackingCard({ saros }: { saros: ReceivedSARO[] }) {
                         <tr className="border-b border-border">
                             <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">#</th>
                             <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">Class</th>
-                            <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">Allotment No. / PAP</th>
-                            <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">Status</th>
-                            <th className="text-right px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Amount (₱)</th>
+                            <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">Allotment No.</th>
+                            <th className="text-left px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">NCA Status</th>
+                            <th className="text-right px-2 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Total (₱)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {pageRows.length === 0 ? (
                             <tr><td colSpan={5} className="text-center py-8 text-muted-foreground text-sm">No records found.</td></tr>
-                        ) : pageRows.map(({ saro, item }, i) => {
+                        ) : pageRows.map((saro, i) => {
+                            const ncaCount = saro.items.filter(item => parseN(item.nca_amount) > 0).length
+                            const totalItems = saro.items.length
                             const globalIdx = (page - 1) * SARO_PAGE_SIZE + i + 1
                             return (
-                                <tr key={`${saro.id}-${item?.id ?? 'empty'}`} className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors">
+                                <tr key={saro.id} className="border-b border-border/40 last:border-0 hover:bg-primary/5 transition-colors cursor-pointer group" onClick={() => onNavigate(saro.allotment_no)}>
                                     <td className="px-2 py-2.5 text-muted-foreground font-gbold text-[11px]">#{String(globalIdx).padStart(2, '0')}</td>
                                     <td className="px-2 py-2.5">
-                                        {(item?.class_type || saro.class_type)
-                                            ? <span className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-0.5 rounded text-[10px] font-gsemibold">{item?.class_type || saro.class_type}</span>
+                                        {saro.class_type
+                                            ? <span className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-0.5 rounded text-[10px] font-gsemibold">{saro.class_type}</span>
                                             : <span className="text-muted-foreground">—</span>}
                                     </td>
                                     <td className="px-2 py-2.5 max-w-[260px]">
-                                        <p className="font-gbold text-primary truncate text-xs">{saro.allotment_no}</p>
-                                        <p className="text-[10px] text-muted-foreground truncate">{item?.pap_code ? `${item.pap_code} · ${item.description || '—'}` : (item?.description || 'No items')}</p>
+                                        <div className="flex items-center gap-1">
+                                        <p className="font-gbold text-primary truncate text-xs group-hover:underline">{saro.allotment_no}</p>
+                                        <ExternalLink size={10} className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                                        </div>
+                                        {totalItems > 0 && (
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{totalItems} line item{totalItems !== 1 ? 's' : ''}</p>
+                                        )}
                                     </td>
                                     <td className="px-2 py-2.5">
-                                        {item && parseN(item.nca_amount) > 0
-                                            ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">NCA ISSUED</span>
-                                            : <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">RECEIVED</span>}
+                                        {totalItems === 0 ? (
+                                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">RECEIVED</span>
+                                        ) : ncaCount === totalItems ? (
+                                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">ALL NCA ISSUED</span>
+                                        ) : ncaCount > 0 ? (
+                                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">{ncaCount}/{totalItems} NCA</span>
+                                        ) : (
+                                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-gsemibold whitespace-nowrap">RECEIVED</span>
+                                        )}
                                     </td>
                                     <td className="px-2 py-2.5 text-right font-gbold text-foreground text-xs tabular-nums">
-                                        {fmtPHP(parseN(item?.amount ?? saro.total_amount))}
+                                        {fmtPHP(parseN(saro.total_amount))}
                                     </td>
                                 </tr>
                             )
@@ -604,7 +743,7 @@ function PctBar({ value, color }: { value: number; color: string }) {
     )
 }
 
-function RAODOverview({ raods, onNavigateRaod }: { raods: RAODRecord[]; onNavigateRaod: (saroNo: string) => void }) {
+function RAODOverview({ raods, onNavigateRaod, onNavigateAll }: { raods: RAODRecord[]; onNavigateRaod: (saroNo: string) => void; onNavigateAll: () => void }) {
     const totalAllotment = raods.reduce((s, r) => s + (parseN(r.amount_of_allotment)), 0)
     const allEntries = raods.flatMap(r => r.entries)
     const totalObligated = allEntries.reduce((s, e) => s + parseN(e.obligated_amount), 0)
@@ -619,38 +758,40 @@ function RAODOverview({ raods, onNavigateRaod }: { raods: RAODRecord[]; onNaviga
             {/* Stat cards */}
             <div className="grid grid-cols-4 gap-4 xxslg:grid-cols-2 sm:grid-cols-1">
                 {/* Allotment */}
-                <div className="bg-card border border-border border-t-2 border-t-blue-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                <div onClick={onNavigateAll} className="bg-card border border-border border-t-2 border-t-blue-500 rounded-xl px-5 py-4 flex flex-col gap-2 cursor-pointer hover:shadow-md hover:border-blue-400 transition group">
                     <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Allotment</p>
                     <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalAllotment)}</p>
-                    <p className="text-[11px] text-muted-foreground">{raods.length} RAOD{raods.length !== 1 ? 's' : ''} · {uniqueSaros} SARO{uniqueSaros !== 1 ? 's' : ''}</p>
+                    <p className="text-[11px] text-muted-foreground flex items-center justify-between">{raods.length} RAOD{raods.length !== 1 ? 's' : ''} · {uniqueSaros} SARO{uniqueSaros !== 1 ? 's' : ''} <ExternalLink size={11} className="text-muted-foreground group-hover:text-primary transition-colors" /></p>
                 </div>
                 {/* Obligated */}
-                <div className="bg-card border border-border border-t-2 border-t-orange-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                <div onClick={onNavigateAll} className="bg-card border border-border border-t-2 border-t-orange-500 rounded-xl px-5 py-4 flex flex-col gap-2 cursor-pointer hover:shadow-md hover:border-orange-400 transition group">
                     <div className="flex items-center justify-between">
                         <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Obligated</p>
-                        <span className={`text-xs font-gbold ${obligatedPct >= 80 ? 'text-green-500' : obligatedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
-                            {obligatedPct.toFixed(1)}%
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-gbold ${obligatedPct >= 80 ? 'text-green-500' : obligatedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>{obligatedPct.toFixed(1)}%</span>
+                            <ExternalLink size={11} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
                     </div>
                     <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalObligated)}</p>
                     <PctBar value={obligatedPct} color={obligatedPct >= 80 ? 'bg-green-500' : obligatedPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'} />
                     <p className="text-[10px] text-muted-foreground">of allotment</p>
                 </div>
                 {/* Disbursed */}
-                <div className="bg-card border border-border border-t-2 border-t-green-500 rounded-xl px-5 py-4 flex flex-col gap-2">
+                <div onClick={onNavigateAll} className="bg-card border border-border border-t-2 border-t-green-500 rounded-xl px-5 py-4 flex flex-col gap-2 cursor-pointer hover:shadow-md hover:border-green-400 transition group">
                     <div className="flex items-center justify-between">
                         <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Total Disbursed</p>
-                        <span className={`text-xs font-gbold ${disbursedPct >= 80 ? 'text-green-500' : disbursedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>
-                            {disbursedPct.toFixed(1)}%
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-gbold ${disbursedPct >= 80 ? 'text-green-500' : disbursedPct >= 50 ? 'text-amber-500' : 'text-orange-500'}`}>{disbursedPct.toFixed(1)}%</span>
+                            <ExternalLink size={11} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
                     </div>
                     <p className="text-2xl font-gbold text-foreground tabular-nums">{fmtPHP(totalDisbursed)}</p>
                     <PctBar value={disbursedPct} color={disbursedPct >= 80 ? 'bg-green-500' : disbursedPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'} />
                     <p className="text-[10px] text-muted-foreground">of obligated</p>
                 </div>
                 {/* Balance */}
-                <div className="bg-card border border-border border-t-2 border-t-violet-500 rounded-xl px-5 py-4 flex flex-col gap-2">
-                    <p className="text-[11px] font-gbold text-muted-foreground uppercase tracking-[0.15em]">Remaining Balance</p>
+                <div onClick={onNavigateAll} className="bg-card border border-border border-t-2 border-t-violet-500 rounded-xl px-5 py-4 flex flex-col gap-2 cursor-pointer hover:shadow-md hover:border-violet-400 transition group">
+                    <p className="text-[11px] font-gbold text-muted-foreground flex items-center justify-between uppercase tracking-[0.15em]">Remaining Balance <ExternalLink size={11} className="text-muted-foreground group-hover:text-primary transition-colors" /></p>
                     <p className={`text-2xl font-gbold tabular-nums ${totalBalance < 0 ? 'text-destructive' : 'text-foreground'}`}>
                         {fmtPHP(Math.abs(totalBalance))}
                     </p>
@@ -733,37 +874,188 @@ function RAODOverview({ raods, onNavigateRaod }: { raods: RAODRecord[]; onNaviga
     )
 }
 
+// ─── Recent NTCA Feed ────────────────────────────────────────────────────────────
+
+function RecentNTCAFeed({ items, onNavigate }: { items: NTCAItem[]; onNavigate: () => void }) {
+    const [search, setSearch] = useState('')
+    const [yearFilter, setYearFilter] = useState('All')
+    const [classFilter, setClassFilter] = useState('All')
+
+    const years = [...new Set(
+        items.map(i => i.nca_date?.slice(0, 4)).filter((y): y is string => !!y)
+    )].sort().reverse()
+
+    const classTypes = [...new Set(items.map(i => i.class_type).filter(Boolean))].sort()
+
+    const filtered = items.filter(item => {
+        const q = search.toLowerCase().trim()
+        const matchSearch = !q ||
+            (item.particulars || '').toLowerCase().includes(q) ||
+            item.saro_no.toLowerCase().includes(q) ||
+            item.pap_code.toLowerCase().includes(q) ||
+            item.nta_no.toLowerCase().includes(q) ||
+            item.nca_no.toLowerCase().includes(q)
+        const matchYear = yearFilter === 'All' || item.nca_date?.startsWith(yearFilter)
+        const matchClass = classFilter === 'All' || item.class_type === classFilter
+        return matchSearch && matchYear && matchClass
+    })
+
+    const recent = [...filtered].sort((a, b) => b.id - a.id).slice(0, 15)
+
+    return (
+        <div className="flex flex-col gap-3">
+            {/* Search + Filters */}
+            <div className="flex flex-wrap gap-2">
+                <div className="relative flex-1 min-w-[160px]">
+                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search particulars, SARO, NTA/NCA no…"
+                        className="w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
+                    />
+                </div>
+                {years.length > 0 && (
+                    <select
+                        value={yearFilter}
+                        onChange={e => setYearFilter(e.target.value)}
+                        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
+                    >
+                        <option value="All">All Years</option>
+                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                )}
+                {classTypes.length > 0 && (
+                    <select
+                        value={classFilter}
+                        onChange={e => setClassFilter(e.target.value)}
+                        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
+                    >
+                        <option value="All">All Classes</option>
+                        {classTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                )}
+            </div>
+
+            {recent.length === 0 ? (
+                <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+                    {search || yearFilter !== 'All' || classFilter !== 'All'
+                        ? 'No records match your filters.'
+                        : 'No NTCA records yet.'}
+                </div>
+            ) : (
+                <>
+                    <p className="text-[11px] text-muted-foreground">
+                        Showing {recent.length} of {filtered.length} record{filtered.length !== 1 ? 's' : ''} (latest first)
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                            <thead>
+                                <tr className="border-b border-border">
+                                    <th className="text-left px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">NCA Date</th>
+                                    <th className="text-left px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">SARO No.</th>
+                                    <th className="text-left px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest">Particulars</th>
+                                    <th className="text-left px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">NTA No.</th>
+                                    <th className="text-left px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">NCA No.</th>
+                                    <th className="text-right px-3 py-2 text-[10px] font-gbold text-muted-foreground uppercase tracking-widest whitespace-nowrap">NTCA Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recent.map((item, idx) => (
+                                    <tr key={item.id} className={`border-b border-border/40 last:border-0 transition-colors cursor-pointer group hover:bg-primary/5 ${idx % 2 === 1 ? 'bg-muted/20' : ''}`} onClick={onNavigate}>
+                                        <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{item.nca_date}</td>
+                                        <td className="px-3 py-2.5 font-gbold text-primary whitespace-nowrap group-hover:underline">{item.saro_no}</td>
+                                        <td className="px-3 py-2.5 max-w-[200px]">
+                                            <p className="truncate text-foreground">{item.particulars || '—'}</p>
+                                            {item.pap_code && <p className="text-[10px] text-muted-foreground">{item.pap_code}</p>}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{item.nta_no || '—'}</td>
+                                        <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{item.nca_no || '—'}</td>
+                                        <td className="px-3 py-2.5 text-right font-gbold text-cyan-500 tabular-nums whitespace-nowrap">
+                                            {fmtPHP(parseN(item.nca_amount))}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
+
 // ─── Main Dashboard ──────────────────────────────────────────────────────────────
+
+const DASH_CURRENT_YEAR = new Date().getFullYear()
+const DASH_YEAR_OPTIONS = Array.from({ length: DASH_CURRENT_YEAR - 2019 }, (_, i) => 2020 + i).reverse()
 
 export default function Dashboard() {
     const navigate = useNavigate()
     const [saros, setSaros] = useState<ReceivedSARO[]>([])
     const [raods, setRaods] = useState<RAODRecord[]>([])
     const [fundTypeList, setFundTypeList] = useState<FundTypeDef[]>([])
+    const [ntcaTotalAmount, setNtcaTotalAmount] = useState(0)
+    const [ntcaCount, setNtcaCount] = useState(0)
+    const [ntcaItems, setNtcaItems] = useState<NTCAItem[]>([])
     const [loading, setLoading] = useState(true)
     const [filterFund, setFilterFund] = useState<string>('All')
     const [filterPap, setFilterPap] = useState<string>('All')
-    const [selectedPapStat, setSelectedPapStat] = useState<PAPStat | null>(null)
+    const [filterYear, setFilterYear] = useState('All')
+    const [filterDateFrom, setFilterDateFrom] = useState('')
+    const [filterDateTo, setFilterDateTo] = useState('')
+    const [filterSaro, setFilterSaro] = useState('All')
 
     useEffect(() => {
         Promise.allSettled([
             efasApi.get('received-saro/'),
             efasApi.get('raod/'),
             efasApi.get('fund-type/'),
-        ]).then(([saroRes, raodRes, ftRes]) => {
+            efasApi.get('received-saro/ntca/'),
+        ]).then(([saroRes, raodRes, ftRes, ntcaRes]) => {
             if (saroRes.status === 'fulfilled') setSaros(saroRes.value.data)
             if (raodRes.status === 'fulfilled') setRaods(raodRes.value.data)
             if (ftRes.status === 'fulfilled') setFundTypeList(ftRes.value.data)
+            if (ntcaRes.status === 'fulfilled') {
+                setNtcaTotalAmount(ntcaRes.value.data.total_amount ?? 0)
+                setNtcaCount(ntcaRes.value.data.count ?? 0)
+                setNtcaItems(ntcaRes.value.data.results ?? [])
+            }
         }).finally(() => setLoading(false))
     }, [])
+
+    // ── Quarter presets ───────────────────────────────────────────────────────
+    const activeYear = filterYear !== 'All' ? parseInt(filterYear) : DASH_CURRENT_YEAR
+    const QUARTERS = [
+        { label: 'Q1', from: `${activeYear}-01-01`, to: `${activeYear}-03-31` },
+        { label: 'Q2', from: `${activeYear}-04-01`, to: `${activeYear}-06-30` },
+        { label: 'Q3', from: `${activeYear}-07-01`, to: `${activeYear}-09-30` },
+        { label: 'Q4', from: `${activeYear}-10-01`, to: `${activeYear}-12-31` },
+    ]
+    const activeQ = QUARTERS.find(q => q.from === filterDateFrom && q.to === filterDateTo)?.label ?? null
+
+    // ── Year options from SARO dates ──────────────────────────────────────────
+    const availableYears = [...new Set(
+        saros.map(s => s.date_of_saro?.slice(0, 4)).filter((y): y is string => !!y)
+    )].sort().reverse()
+
+    // ── SARO options ──────────────────────────────────────────────────────────
+    const saroOptions = [...new Set(saros.map(s => s.allotment_no).filter(Boolean))].sort()
 
     // ── All items flattened ────────────────────────────────────────────────────
     const allItems = saros.flatMap(s => s.items)
 
-    // ── Code → name lookup from API fund-type list ──────────────────────────────
-    const ftCodeToName = new Map(fundTypeList.map(f => [f.code, f.name]))
-    const resolveFund = (code: string) => ftCodeToName.get(code) || code
+    // ── Apply date/year/SARO filters first ────────────────────────────────────
+    const dateSaros = saros.filter(s => {
+        const d = s.date_of_saro ?? ''
+        if (filterYear !== 'All' && !d.startsWith(filterYear)) return false
+        if (filterDateFrom && d < filterDateFrom) return false
+        if (filterDateTo && d > filterDateTo) return false
+        if (filterSaro !== 'All' && s.allotment_no !== filterSaro) return false
+        return true
+    })
 
+    // ── Code → name lookup from API fund-type list ──────────────────────────────
     // ── Fund type options ─────────────────────────────────────────────────────
     // Use the API list when loaded; fall back to data-derived names (no raw numeric codes)
     const fundTypes: FundTypeDef[] = fundTypeList.length > 0
@@ -773,8 +1065,8 @@ export default function Dashboard() {
 
     // ── Filter by fund type (filterFund stores the code) ────────────────────────
     const fundSaros = filterFund === 'All'
-        ? saros
-        : saros.filter(s => s.items.some(i => i.fund_type === filterFund))
+        ? dateSaros
+        : dateSaros.filter(s => s.items.some(i => i.fund_type === filterFund))
 
     // ── PAP / Project options for dropdown (from fund-filtered saros) ──────────
     const papOptions = [...new Map(
@@ -790,9 +1082,47 @@ export default function Dashboard() {
 
     // ── Totals ─────────────────────────────────────────────────────────────────
     const totalAllotment = filteredSaros.reduce((s, r) => s + parseN(r.total_amount), 0)
-    const totalObligation = filteredSaros.flatMap(s => s.items).reduce((s, i) => s + parseN(i.nca_amount), 0)
-    const totalBalance = totalAllotment - totalObligation
     const totalAmount = filteredSaros.flatMap(s => s.items).reduce((s, i) => s + parseN(i.amount), 0)
+    // Filter items by nca_date so obligation totals align with the selected date range,
+    // not the SARO issuance date (nca_amount on a SARO item accumulates over its lifetime).
+    const obligationItems = filteredSaros.flatMap(s => s.items).filter(i => {
+        if (filterYear !== 'All' && !i.nca_date?.startsWith(filterYear)) return false
+        if (filterDateFrom && i.nca_date && i.nca_date < filterDateFrom) return false
+        if (filterDateTo && i.nca_date && i.nca_date > filterDateTo) return false
+        return true
+    })
+    const obligationItemIds = new Set(obligationItems.map(i => i.id))
+    const totalObligation = obligationItems.reduce((s, i) => s + parseN(i.nca_amount), 0)
+    const totalBalance = totalAllotment - totalObligation
+
+    // Filter RAOD by active PAP + SARO filters
+    const filteredRaods = raods.filter(r => {
+        if (filterPap !== 'All' && r.pap_code !== filterPap && (r.pap_name || '').trim() !== filterPap) return false
+        if (filterSaro !== 'All' && r.saro_no !== filterSaro) return false
+        return true
+    })
+    // Filter RAOD entries by date_of_obligation to respect the active date range.
+    const filteredRaodEntries = filteredRaods.flatMap(r => r.entries).filter(e => {
+        if (filterYear !== 'All' && e.date_of_obligation && !e.date_of_obligation.startsWith(filterYear)) return false
+        if (filterDateFrom && e.date_of_obligation && e.date_of_obligation < filterDateFrom) return false
+        if (filterDateTo && e.date_of_obligation && e.date_of_obligation > filterDateTo) return false
+        return true
+    })
+    const totalDisbursed = filteredRaodEntries.reduce((s, e) => s + parseN(e.total_disbursed), 0)
+
+    // Filter NTCA items by fund + PAP + year + date range + SARO
+    const isDefaultFilters = filterFund === 'All' && filterPap === 'All' && filterYear === 'All' && !filterDateFrom && !filterDateTo && filterSaro === 'All'
+    const filteredNtcaItems = ntcaItems.filter(i => {
+        if (filterFund !== 'All' && i.fund_type !== filterFund) return false
+        if (filterPap !== 'All' && i.pap_code !== filterPap) return false
+        if (filterYear !== 'All' && !i.nca_date?.startsWith(filterYear)) return false
+        if (filterDateFrom && i.nca_date && i.nca_date < filterDateFrom) return false
+        if (filterDateTo && i.nca_date && i.nca_date > filterDateTo) return false
+        if (filterSaro !== 'All' && i.saro_no !== filterSaro) return false
+        return true
+    })
+    const filteredNtcaTotal = isDefaultFilters ? ntcaTotalAmount : filteredNtcaItems.reduce((s, i) => s + parseN(i.nca_amount), 0)
+    const filteredNtcaCount = isDefaultFilters ? ntcaCount : filteredNtcaItems.length
 
     // ── Fund-type breakdown for cards ─────────────────────────────────────────
     const fundSums = new Map<string, { allotment: number; obligation: number }>()
@@ -802,7 +1132,7 @@ export default function Dashboard() {
                 const ft = item.fund_type || 'Other'
                 const existing = fundSums.get(ft) ?? { allotment: 0, obligation: 0 }
                 existing.allotment += parseN(item.amount)
-                existing.obligation += parseN(item.nca_amount)
+                if (obligationItemIds.has(item.id)) existing.obligation += parseN(item.nca_amount)
                 fundSums.set(ft, existing)
             })
         } else {
@@ -830,68 +1160,56 @@ export default function Dashboard() {
         .filter(([n]) => !pinnedKeys.has(n))
         .sort((a, b) => b[1].allotment - a[1].allotment)
 
-    // ── PAP stats for charts ──────────────────────────────────────────────────
+    // ── PAP stats for charts — grouped by pap_name to eliminate duplicates ───
     const papMap = new Map<string, PAPStat>()
     filteredSaros.forEach(s => {
         s.items.forEach(item => {
-            const key = item.pap_code || item.description || '(No PAP)'
-            if (!papMap.has(key)) {
-                papMap.set(key, {
-                    name: item.pap_name || item.description || key,
-                    code: item.pap_code,
-                    allotment: 0,
-                    obligation: 0,
-                    balance: 0,
-                    itemCount: 0,
-                    saroNos: [],
-                })
+            const name = (item.pap_name || item.description || item.pap_code || '(No PAP)').trim()
+            const code = (item.pap_code || '').trim()
+            if (!papMap.has(name)) {
+                papMap.set(name, { name, code, allotment: 0, obligation: 0, disbursed: 0, balance: 0, itemCount: 0, saroNos: [] })
             }
-            const stat = papMap.get(key)!
+            const stat = papMap.get(name)!
+            // Prefer an alphabetic code over a raw numeric ID
+            if (!stat.code || (/^\d+$/.test(stat.code) && code && !/^\d+$/.test(code))) stat.code = code
             stat.allotment += parseN(item.amount)
-            stat.obligation += parseN(item.nca_amount)
+            if (obligationItemIds.has(item.id)) stat.obligation += parseN(item.nca_amount)
             stat.balance += parseN(item.balance)
             stat.itemCount++
             if (!stat.saroNos.includes(s.allotment_no)) stat.saroNos.push(s.allotment_no)
         })
     })
+    // Cross-reference RAOD disbursement per PAP — match by name then code
+    filteredRaods.forEach(r => {
+        const byName = (r.pap_name || '').trim()
+        const byCode = (r.pap_code || '').trim()
+        const stat = (byName && papMap.get(byName)) || (byCode && papMap.get(byCode)) || null
+        if (stat) r.entries.filter(e => {
+            if (filterYear !== 'All' && e.date_of_obligation && !e.date_of_obligation.startsWith(filterYear)) return false
+            if (filterDateFrom && e.date_of_obligation && e.date_of_obligation < filterDateFrom) return false
+            if (filterDateTo && e.date_of_obligation && e.date_of_obligation > filterDateTo) return false
+            return true
+        }).forEach(e => { stat.disbursed += parseN(e.total_disbursed) })
+    })
+
     const papStats = Array.from(papMap.values()).filter(p => p.allotment > 0 || p.obligation > 0)
 
-    // ── RAOD records for detail panel ─────────────────────────────────────────
-    const raodRecordsForPanel = selectedPapStat
-        ? raods
-            .filter(r => r.pap_code === selectedPapStat.code)
-            .flatMap(r => r.entries.map(e => ({
-                id: e.id,
-                saro_no: r.saro_no,
-                pap: r.pap_code,
-                pap_code: r.pap_code,
-                amount_of_allotment: r.amount_of_allotment,
-                name_of_claimant: e.name_of_claimant,
-                date_of_obligation: e.date_of_obligation,
-                ors_no: e.ors_no,
-                obligated_amount: e.obligated_amount,
-                cash: e.cash,
-                non_tra: e.non_tra,
-                particulars: e.particulars,
-                class_type_detail: null as null,
-                fund_source_detail: null as null,
-            })))
-        : []
+    const navigateToPapInRaod = (stat: PAPStat) => {
+        navigate('/efas-v1/raod', { state: { search: stat.name } })
+    }
 
     const navigateToRaod = (saroNo: string) => {
         navigate('/efas-v1/raod', { state: saroNo ? { openSaroNo: saroNo } : undefined })
     }
+    const navigateToSaro = (saroNo?: string) => {
+        navigate('/efas-v1/received-saro', { state: saroNo ? { search: saroNo } : undefined })
+    }
+    const navigateToNtca = () => {
+        navigate('/efas-v1/received-ntca')
+    }
 
     return (
         <>
-            {selectedPapStat && (
-                <ProjectDetailPanel
-                    programName={selectedPapStat.name}
-                    programCode={selectedPapStat.code}
-                    raodRecords={raodRecordsForPanel}
-                    onClose={() => setSelectedPapStat(null)}
-                />
-            )}
             <div className="flex flex-col gap-5">
                 {/* ── Header ── */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -901,52 +1219,130 @@ export default function Dashboard() {
                             Financial overview — DICT Regional Office 10
                         </p>
                     </div>
-                    {!loading && (fundTypes.length > 0 || papOptions.length > 0) && (
-                        <div className="flex items-center gap-3 flex-wrap shrink-0 mt-1">
-                            {fundTypes.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Fund Type:</span>
+                    {loading && <RefreshCw size={16} className="animate-spin text-muted-foreground mt-1.5" />}
+                </div>
+
+                {/* ── Filter Bar ── */}
+                {!loading && (
+                    <div className="flex flex-col gap-2 p-3 rounded-xl border border-border bg-card/60">
+                        {/* Row 1: Year, Quarter presets, Date range, SARO */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-gmedium text-muted-foreground whitespace-nowrap">Date:</span>
+                            {/* Year */}
+                            <select
+                                value={filterYear}
+                                onChange={e => { setFilterYear(e.target.value); setFilterDateFrom(''); setFilterDateTo('') }}
+                                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                                <option value="All">All Years</option>
+                                {(availableYears.length > 0 ? availableYears : DASH_YEAR_OPTIONS.map(String)).map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                            {/* Q1–Q4 presets */}
+                            {QUARTERS.map(q => (
+                                <button
+                                    key={q.label}
+                                    onClick={() => { setFilterDateFrom(q.from); setFilterDateTo(q.to) }}
+                                    className={`h-8 px-2.5 rounded-lg text-xs font-gmedium border transition ${
+                                        activeQ === q.label
+                                            ? 'bg-primary text-white border-primary'
+                                            : 'bg-background text-foreground/80 border-border hover:bg-muted'
+                                    }`}
+                                >
+                                    {q.label}
+                                </button>
+                            ))}
+                            <span className="text-xs text-muted-foreground mx-0.5">|</span>
+                            <input
+                                type="date"
+                                value={filterDateFrom}
+                                onChange={e => setFilterDateFrom(e.target.value)}
+                                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <span className="text-xs text-muted-foreground">–</span>
+                            <input
+                                type="date"
+                                value={filterDateTo}
+                                onChange={e => setFilterDateTo(e.target.value)}
+                                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            {/* SARO filter */}
+                            {saroOptions.length > 0 && (
+                                <>
+                                    <span className="text-xs text-muted-foreground mx-0.5">|</span>
+                                    <span className="text-xs font-gmedium text-muted-foreground whitespace-nowrap">SARO:</span>
                                     <select
-                                        value={filterFund}
-                                        onChange={e => { setFilterFund(e.target.value); setFilterPap('All') }}
-                                        className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary"
+                                        value={filterSaro}
+                                        onChange={e => setFilterSaro(e.target.value)}
+                                        className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[200px]"
                                     >
-                                        <option value="All">All Fund Types</option>
-                                        {fundTypes.map(ft => (
-                                            <option key={ft.code} value={ft.code}>{ft.name}</option>
+                                        <option value="All">All SAROs</option>
+                                        {saroOptions.map(s => (
+                                            <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
-                                </div>
-                            )}
-                            {papOptions.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground font-gmedium whitespace-nowrap">Project:</span>
-                                    <select
-                                        value={filterPap}
-                                        onChange={e => setFilterPap(e.target.value)}
-                                        className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground font-gmedium focus:outline-none focus:ring-1 focus:ring-primary max-w-[220px] truncate"
-                                    >
-                                        <option value="All">All Projects</option>
-                                        {papOptions.map(p => (
-                                            <option key={p.code} value={p.code}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                </>
                             )}
                         </div>
-                    )}
-                </div>
+                        {/* Row 2: Fund Type, Project, Clear */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-gmedium text-muted-foreground whitespace-nowrap">Filter:</span>
+                            {fundTypes.length > 0 && (
+                                <select
+                                    value={filterFund}
+                                    onChange={e => { setFilterFund(e.target.value); setFilterPap('All') }}
+                                    className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                >
+                                    <option value="All">All Fund Types</option>
+                                    {fundTypes.map(ft => (
+                                        <option key={ft.code} value={ft.code}>{ft.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                            {papOptions.length > 0 && (
+                                <select
+                                    value={filterPap}
+                                    onChange={e => setFilterPap(e.target.value)}
+                                    className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[240px]"
+                                >
+                                    <option value="All">All Projects</option>
+                                    {papOptions.map(p => (
+                                        <option key={p.code} value={p.code}>{p.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                            {/* Clear all filters */}
+                            {(filterYear !== 'All' || filterDateFrom || filterDateTo || filterSaro !== 'All' || filterFund !== 'All' || filterPap !== 'All') && (
+                                <button
+                                    onClick={() => {
+                                        setFilterYear('All')
+                                        setFilterDateFrom('')
+                                        setFilterDateTo('')
+                                        setFilterSaro('All')
+                                        setFilterFund('All')
+                                        setFilterPap('All')
+                                    }}
+                                    className="h-8 flex items-center gap-1 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition ml-auto"
+                                >
+                                    <X size={11} /> Clear Filters
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="flex items-center justify-center py-32 text-muted-foreground text-sm">Loading dashboard data…</div>
                 ) : (
                     <>
-                        {/* ── Row 1: 4 Financial Cards ── */}
-                        <div className="grid grid-cols-4 gap-4 xxslg:grid-cols-2 sm:grid-cols-1">
+                        {/* ── Row 1: Financial Cards ── */}
+                        <div className="grid grid-cols-5 gap-4 xxslg:grid-cols-2 sm:grid-cols-1">
                             {/* Card 1 — Allotment */}
                             <FinancialCard
                                 title="Received SARO (Allotment)"
                                 accentClass="border-t-blue-500"
+                                onClick={() => navigateToSaro()}
                                 rows={[
                                     ...fundRows.map(([ft, v]) => ({
                                         label: ft,
@@ -967,6 +1363,7 @@ export default function Dashboard() {
                             <FinancialCard
                                 title="NCA Issued (Obligation)"
                                 accentClass="border-t-cyan-500"
+                                onClick={() => navigateToNtca()}
                                 rows={[
                                     ...fundRows.map(([ft, v]) => ({
                                         label: ft,
@@ -978,7 +1375,7 @@ export default function Dashboard() {
                                         value: fmtPHP(totalObligation),
                                         highlight: true,
                                         color: 'text-cyan-500',
-                                        sub: `${pct(totalObligation, totalAllotment)}% of allotment`,
+                                        sub: `${Math.min(100, pct(totalObligation, totalAllotment))}% of allotment`,
                                         barPct: pct(totalObligation, totalAllotment),
                                     },
                                 ]}
@@ -1020,6 +1417,7 @@ export default function Dashboard() {
                             <FinancialCard
                                 title="SARO Status"
                                 accentClass="border-t-violet-500"
+                                onClick={() => navigateToSaro()}
                                 rows={[
                                     {
                                         label: 'Total SAROs',
@@ -1042,38 +1440,85 @@ export default function Dashboard() {
                                     },
                                 ]}
                             />
+                            {/* Card 5 — Received NTCA */}
+                            <FinancialCard
+                                title="Received NTCA"
+                                accentClass="border-t-teal-500"
+                                onClick={() => navigateToNtca()}
+                                rows={[
+                                    {
+                                        label: 'NTCA Records',
+                                        value: String(filteredNtcaCount),
+                                    },
+                                    {
+                                        label: 'vs NCA Issued',
+                                        value: `${pct(filteredNtcaTotal, totalObligation)}%`,
+                                        barPct: Math.min(100, pct(filteredNtcaTotal, totalObligation)),
+                                    },
+                                    {
+                                        label: 'Total NTCA Amount',
+                                        value: fmtPHP(filteredNtcaTotal),
+                                        highlight: true,
+                                        color: 'text-teal-500',
+                                    },
+                                ]}
+                            />
                         </div>
 
 
 
-                        {/* ── Row 2: PAP Performance + Tracking Table ── */}
+                        {/* ── Row 2: PAP Performance + Pie Chart ── */}
+                        <div className="grid grid-cols-2 gap-4 xslg:grid-cols-1">
+                            {/* Left: Program / PAP Performance */}
+                            <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
+                                <ProgramPerformanceCard stats={papStats} onSelectPap={navigateToPapInRaod} totalAllotment={totalAllotment} />
+                            </div>
+
+                            {/* Right: Financial Pie Chart */}
+                            <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-5">
+                                <div className="flex items-start justify-between">
+                                    <SectionHeader
+                                        title="Financial Overview"
+                                        sub="Allotment, obligation and disbursement breakdown"
+                                        icon={TrendingUp}
+                                    />
+                                    <RealtimeBadge />
+                                </div>
+                                <FinancialPieChart
+                                    totalAllotment={totalAllotment}
+                                    totalObligation={totalObligation}
+                                    totalDisbursed={totalDisbursed}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Row 3: SARO Tracking + NTCA Activity ── */}
                         <div className="grid grid-cols-2 gap-4 xslg:grid-cols-1">
                             <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
-                                <ProgramPerformanceCard stats={papStats} onSelectPap={setSelectedPapStat} />
+                                <ActiveTrackingCard saros={filteredSaros} onNavigate={navigateToSaro} />
                             </div>
                             <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
-                                <ActiveTrackingCard saros={filteredSaros} />
+                                <div className="flex items-start justify-between mb-5">
+                                    <SectionHeader
+                                        title="Recent NTCA Activity"
+                                        sub="Latest 15 Received NTCA records by entry order"
+                                        icon={Activity}
+                                    />
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <RealtimeBadge />
+                                        <button
+                                            onClick={navigateToNtca}
+                                            className="text-[11px] font-gbold text-primary hover:underline flex items-center gap-1"
+                                        >
+                                            View All <ExternalLink size={11} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <RecentNTCAFeed items={filteredNtcaItems} onNavigate={navigateToNtca} />
                             </div>
                         </div>
 
-                        {/* ── Row 3: Financial Status Overview (Horizontal Bars) ── */}
-                        <div className="bg-card border border-border rounded-xl p-5">
-                            <div className="flex items-start justify-between mb-5">
-                                <SectionHeader
-                                    title="Financial Status Overview"
-                                    sub="Item allotment vs NCA obligation by PAP — top 8"
-                                    icon={TrendingUp}
-                                />
-                                <RealtimeBadge />
-                            </div>
-                            <div className="flex items-center gap-4 mb-4 text-[11px]">
-                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />Allotment</span>
-                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />NCA (Obligation)</span>
-                            </div>
-                            <FinancialStatusOverview stats={papStats} />
-                        </div>
-
-                        {/* ── Row 4: RAOD Obligation & Disbursement ── */}
+                        {/* ── Obligation & Disbursement ── */}
                         {raods.length > 0 && (
                             <div className="bg-card border border-border rounded-xl p-5">
                                 <div className="flex items-start justify-between mb-5">
@@ -1084,7 +1529,7 @@ export default function Dashboard() {
                                     />
                                     <RealtimeBadge />
                                 </div>
-                                <RAODOverview raods={raods} onNavigateRaod={navigateToRaod} />
+                                <RAODOverview raods={filteredRaods} onNavigateRaod={navigateToRaod} onNavigateAll={() => navigateToRaod('')} />
                             </div>
                         )}
                     </>

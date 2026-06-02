@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(python -c ' *)",
+      "Bash(ls \"D:\\\\All Projects\\\\Django\\\\dtms-efas-server\")",
+      "Read(//d/All Projects/Django/dtms-efas-server/**)",
+      "Bash(Select-String -Pattern \"INSTALLED_APPS\" -Context 0,20)",
+      "Bash(python manage.py makemigrations realignment)",
+      "Bash(python manage.py migrate realignment)",
+      "Bash(npm run *)"
+    ]
+  }
+}
